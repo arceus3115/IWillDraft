@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IWillDraft — Top 5 Coaching Support Prototypes</title>
+  <style>
+    :root {
+      --bg: #0b1017;
+      --panel: #121a24;
+      --panel-hover: #172231;
+      --border: #233246;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.12);
+      --gold: #f59e0b;
+      --green: #10b981;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top right, #132238 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 24px;
+      line-height: 1.5;
+    }
+    .container { max-width: 1120px; margin: 0 auto; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--accent); background: var(--accent-soft);
+      border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 999px;
+      padding: 5px 12px; margin-bottom: 14px;
+    }
+    h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 10px; }
+    .subtitle { color: var(--muted); max-width: 780px; font-size: 15px; margin-bottom: 32px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+    .card {
+      display: flex; flex-direction: column; justify-content: space-between;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      padding: 22px; text-decoration: none; color: inherit;
+      transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px); border-color: var(--accent); background: var(--panel-hover);
+    }
+    .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .num {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px; font-weight: 700; color: var(--accent);
+      background: rgba(56, 189, 248, 0.1); padding: 3px 8px; border-radius: 6px;
+    }
+    .phase { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .card h2 { font-size: 18px; margin-bottom: 8px; color: #f8fafc; }
+    .card p { font-size: 13.5px; color: var(--muted); margin-bottom: 16px; }
+    .steps {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px;
+    }
+    .step-pill {
+      font-size: 11px; color: #cbd5e1; background: #0e151f;
+      border: 1px solid #1e2c3d; padding: 3px 8px; border-radius: 5px;
+    }
+    .cta {
+      font-size: 13px; font-weight: 600; color: var(--accent);
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="badge">Cloud9 x JetBrains Hackathon • Top 5 Non-Overlapping Prototypes</div>
+    <h1>IWillDraft — Coaching Staff Support Prototypes</h1>
+    <p class="subtitle">
+      Five interactive, traversable UI mockups designed to support professional League of Legends coaches and analysts across weekly patch prep, conditional draft scouting, Hard Fearless Bo5 series planning, 2D Rift spatial tendencies, and Riot-legal stage sheets—never black-box draft automation.
+    </p>
+
+    <div class="grid">
+      <a class="card" href="./01-universe-riser-matrix/index.html">
+        <div>
+          <div class="card-top">
+            <span class="num">PROTOTYPE 01 • IDEA #5</span>
+            <span class="phase">Patch Physics</span>
+          </div>
+          <h2>Player Pool x Universe Riser Matrix</h2>
+          <p>Crosses Patch 26.23 champion/item/monster breakpoint deltas and LCK early adoption against opponent &amp; Cloud9 Kia GRID comfort pools.</p>
+          <div class="steps">
+            <span class="step-pill">1. Universe Diffs</span>
+            <span class="step-pill">2. Comfort Matrix</span>
+            <span class="step-pill">3. LCK→LCS Lag</span>
+            <span class="step-pill">4. Scrim Brief</span>
+          </div>
+        </div>
+        <div class="cta"><span>Launch Interactive Prototype</span><span>→</span></div>
+      </a>
+
+      <a class="card" href="./02-conditional-phase1-trees/index.html">
+        <div>
+          <div class="card-top">
+            <span class="num">PROTOTYPE 02 • IDEA #7</span>
+            <span class="phase">Draft Junctions</span>
+          </div>
+          <h2>Conditional Phase-1 Opening Trees</h2>
+          <p>Replaces flat season pick-rate tables with side-specific B1 → R1/R2 → B2/B3 response branches and Flex-Pick Bluff vs. True-Flex resolution.</p>
+          <div class="steps">
+            <span class="step-pill">1. Opening Tree</span>
+            <span class="step-pill">2. Flex Bluff Audit</span>
+            <span class="step-pill">3. GRID Evidence Logs</span>
+          </div>
+        </div>
+        <div class="cta"><span>Launch Interactive Prototype</span><span>→</span></div>
+      </a>
+
+      <a class="card" href="./03-fearless-pool-cliff-planner/index.html">
+        <div>
+          <div class="card-top">
+            <span class="num">PROTOTYPE 03 • IDEAS #9–12</span>
+            <span class="phase">Hard Fearless Bo5</span>
+          </div>
+          <h2>Hard Fearless Pool-Cliff &amp; Starvation Planner</h2>
+          <p>Models 10-to-40 champion series lockouts, player G1→G5 decay curves, "Take vs. Starve" tradeoffs, and Game 4/5 forced pocket picks.</p>
+          <div class="steps">
+            <span class="step-pill">G1–G5 Scrubber</span>
+            <span class="step-pill">1. Decay Curves</span>
+            <span class="step-pill">2. Take vs. Starve</span>
+            <span class="step-pill">3. Pocket Cliffs</span>
+          </div>
+        </div>
+        <div class="cta"><span>Launch Interactive Prototype</span><span>→</span></div>
+      </a>
+
+      <a class="card" href="./04-rift-spatial-pathing-map/index.html">
+        <div>
+          <div class="card-top">
+            <span class="num">PROTOTYPE 04 • IDEAS #13–15</span>
+            <span class="phase">2D Rift Geometry</span>
+          </div>
+          <h2>Summoner's Rift Early Pathing &amp; Faelight Map</h2>
+          <p>Interactive 2D Rift map plotting 0:00–8:00 GRID {x,y} invades, jungle pathing, and Season 2026 Faelight superward setups filtered by lane prio.</p>
+          <div class="steps">
+            <span class="step-pill">1. Lv1 Invades</span>
+            <span class="step-pill">2. Jungle Clears</span>
+            <span class="step-pill">3. Faelight Setups</span>
+          </div>
+        </div>
+        <div class="cta"><span>Launch Interactive Prototype</span><span>→</span></div>
+      </a>
+
+      <a class="card" href="./05-playbook-huddle-stage-binder/index.html">
+        <div>
+          <div class="card-top">
+            <span class="num">PROTOTYPE 05 • IDEAS #17–20</span>
+            <span class="phase">Match-Day Workflow</span>
+          </div>
+          <h2>Series Playbook, Locker-Room Diff &amp; Stage Binder</h2>
+          <p>Bridges coach-authored contingent branches, a 5-minute inter-game locker-room pivot diff, and a Riot-compliant printable A4 stage sheet.</p>
+          <div class="steps">
+            <span class="step-pill">1. Playbook Canvas</span>
+            <span class="step-pill">2. 5-Min Huddle Diff</span>
+            <span class="step-pill">3. Printable Stage Sheet</span>
+          </div>
+        </div>
+        <div class="cta"><span>Launch Interactive Prototype</span><span>→</span></div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>03 — Hard Fearless Pool-Cliff & Starvation Planner | IWillDraft</title>
+  <style>
+    :root {
+      --bg: #0b1017;
+      --panel: #121a24;
+      --panel-2: #172231;
+      --border: #243347;
+      --accent: #38bdf8;
+      --accent-dim: rgba(56, 189, 248, 0.14);
+      --red: #f43f5e;
+      --red-dim: rgba(244, 63, 94, 0.15);
+      --green: #10b981;
+      --green-dim: rgba(16, 185, 129, 0.14);
+      --amber: #f59e0b;
+      --amber-dim: rgba(245, 158, 11, 0.15);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.45; }
+    .topnav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 20px; background: #080c12; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .topnav a { color: var(--muted); text-decoration: none; padding: 4px 10px; border-radius: 6px; border: 1px solid transparent; }
+    .topnav a:hover { color: var(--text); background: var(--panel); }
+    .topnav a.active { color: var(--accent); background: var(--accent-dim); border-color: rgba(56,189,248,0.35); font-weight: 600; }
+    .shell { max-width: 1360px; margin: 0 auto; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+    .eyebrow { font-family: var(--mono); font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.07em; }
+    h1 { font-size: 23px; margin: 4px 0; }
+    .sub { font-size: 13px; color: var(--muted); }
+    button { font-family: inherit; font-size: 12.5px; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent-dim); color: var(--accent); border-color: rgba(56,189,248,0.45); font-weight: 600; }
+    .scrubber {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+      background: #0e1622; border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 14px;
+    }
+    .game-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .g-btn { font-family: var(--mono); font-weight: 700; padding: 7px 13px; }
+    .g-btn.active { background: var(--red-dim); color: #fda4af; border-color: var(--red); }
+    .stepper { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; flex-wrap: wrap; }
+    .step-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .step-tab { padding: 7px 13px; border-radius: 7px; font-size: 12.5px; font-weight: 600; background: transparent; border: 1px solid transparent; color: var(--muted); }
+    .step-tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(56,189,248,0.4); }
+    .workspace { display: grid; grid-template-columns: 1fr 360px; gap: 18px; align-items: start; }
+    @media (max-width: 1024px) { .workspace { grid-template-columns: 1fr; } }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 11px; padding: 18px; }
+    .role-row { background: #0e151f; border: 1px solid var(--border); border-radius: 9px; padding: 13px; margin-bottom: 10px; cursor: pointer; }
+    .role-row.active { border-color: var(--accent); }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .chip { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 5px; background: #142030; border: 1px solid #283a52; }
+    .chip.locked { text-decoration: line-through; opacity: 0.45; background: var(--red-dim); border-color: rgba(244,63,94,0.35); color: #fda4af; }
+    .chip.pinch { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+    .chip.pocket { border-style: dashed; border-color: var(--red); color: #fda4af; }
+    .plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+    @media (max-width: 780px) { .plan-grid { grid-template-columns: 1fr; } }
+    .plan-box { background: #0e151f; border: 1px solid var(--border); border-radius: 9px; padding: 14px; cursor: pointer; }
+    .plan-box.active { border-color: var(--green); background: rgba(16,185,129,0.06); }
+    .tag { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px; }
+    .tag.cliff { color: var(--red); background: var(--red-dim); }
+    .tag.safe { color: var(--green); background: var(--green-dim); }
+    .tag.warn { color: var(--amber); background: var(--amber-dim); }
+    .math-box { background: #0b1119; border: 1px solid var(--border); border-radius: 8px; padding: 11px; margin: 12px 0; font-family: var(--mono); font-size: 11.5px; color: #cbd5e1; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <nav class="topnav">
+    <a href="../index.html">← All Prototypes</a>
+    <a href="../01-universe-riser-matrix/index.html">01 Universe Riser</a>
+    <a href="../02-conditional-phase1-trees/index.html">02 Phase-1 Trees</a>
+    <a class="active" href="../03-fearless-pool-cliff-planner/index.html">03 Fearless Cliffs</a>
+    <a href="../04-rift-spatial-pathing-map/index.html">04 Rift Spatial Map</a>
+    <a href="../05-playbook-huddle-stage-binder/index.html">05 Stage Playbook</a>
+  </nav>
+
+  <div class="shell">
+    <header class="header">
+      <div>
+        <div class="eyebrow">Prototype 03 • Brainstorm Ideas #9, #10, #11 &amp; #12</div>
+        <h1>Hard Fearless Bo5 Pool-Cliff &amp; Starvation Planner</h1>
+        <p class="sub">Simulates cumulative series champion lockouts (10 → 40 locked), player decay curves, and Game 4–5 forced pocket picks.</p>
+      </div>
+    </header>
+
+    <div class="scrubber">
+      <div>
+        <div class="eyebrow">Series Hard Fearless Scrubber</div>
+        <div style="font-size:13px;color:var(--muted)" id="lockSummaryText"></div>
+      </div>
+      <div class="game-btns" id="gameBtns">
+        <button class="g-btn" data-g="1">Game 1 (0 Locked)</button>
+        <button class="g-btn" data-g="2">Game 2 (10 Locked)</button>
+        <button class="g-btn" data-g="3">Game 3 (20 Locked)</button>
+        <button class="g-btn active" data-g="4">Game 4 (30 Locked)</button>
+        <button class="g-btn" data-g="5">Game 5 (40 Locked)</button>
+      </div>
+    </div>
+
+    <div class="stepper">
+      <div class="step-tabs" id="stepTabs">
+        <button class="step-tab active" data-step="0">1. Player Decay Curves (G1→G5)</button>
+        <button class="step-tab" data-step="1">2. "Take vs. Starve" Planner (#10)</button>
+        <button class="step-tab" data-step="2">3. Game 4/5 Pocket Cliff &amp; Comp Audit (#11–12)</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="prevBtn">← Prev View</button>
+        <button class="primary" id="nextBtn">Next View →</button>
+      </div>
+    </div>
+
+    <div class="workspace">
+      <main class="card">
+        <section id="view-0">
+          <h2 style="font-size:16px;margin-bottom:4px">Opponent Roster Performance Decay Under Fearless Locks</h2>
+          <p class="sub">Scrub Game 1 → Game 5 above or click any FlyQuest player to inspect comfort depletion and GD@15 drop-off.</p>
+          <div id="decayList" style="margin-top:12px"></div>
+        </section>
+
+        <section id="view-1" class="hidden">
+          <h2 style="font-size:16px;margin-bottom:4px">Game 1–2 Series Resource Tradeoff: "Take S-Tier" vs. "Starve Shallow Role"</h2>
+          <p class="sub">Select a series resource strategy to see how Game 1–2 handshakes alter Opponent Mid &amp; Bot pools by Game 4.</p>
+          <div class="plan-grid" id="planGrid"></div>
+        </section>
+
+        <section id="view-2" class="hidden">
+          <h2 style="font-size:16px;margin-bottom:4px">Forced Pocket-Pick Forecaster &amp; Comp Damage-Split Audit</h2>
+          <p class="sub">Click any non-locked champion chip to simulate a Phase-2 Pinch Ban (`R4/B4/B5`) and trigger composition warnings.</p>
+          <div id="cliffForecaster" style="margin-top:12px"></div>
+        </section>
+      </main>
+
+      <aside class="card" id="cliffInspector"></aside>
+    </div>
+  </div>
+
+  <script>
+    const PLAYERS = [
+      {
+        id: 'quad', name: 'Quad', role: 'MID', resilience: 'CLIFF AT G4',
+        gdByGame: ['+340g', '+260g', '+90g', '-390g', '-540g'],
+        wrByGame: ['72%', '67%', '54%', '31%', '25%'],
+        comfort: [
+          { name: 'Orianna', lockedAt: 1, ap: true },
+          { name: 'Azir', lockedAt: 2, ap: true },
+          { name: 'Galio', lockedAt: 3, ap: true },
+          { name: 'Taliyah', lockedAt: 4, ap: true },
+          { name: 'Hwei', lockedAt: 99, ap: true, pinchDefault: true },
+          { name: 'Syndra', lockedAt: 99, ap: true, pinchDefault: true }
+        ],
+        pockets: ['Cassiopeia (1 career game in 2026 • Patch 26.23 riser)', 'Viktor (0 stage games in 14 months)', 'Tristana Mid (Forces 84% AD team comp!)']
+      },
+      {
+        id: 'massu', name: 'Massu', role: 'BOT', resilience: 'MODERATE DROP G4',
+        gdByGame: ['+280g', '+210g', '+120g', '-190g', '-310g'],
+        wrByGame: ['68%', '64%', '58%', '42%', '38%'],
+        comfort: [
+          { name: 'Kalista', lockedAt: 1 },
+          { name: 'Varus', lockedAt: 2 },
+          { name: 'KaiSa', lockedAt: 3 },
+          { name: 'Ashe', lockedAt: 4 },
+          { name: 'Ezreal', lockedAt: 5 },
+          { name: 'Jhin', lockedAt: 99 }
+        ],
+        pockets: ['Ziggs Bot (Emergency AP patch if Mid goes AD)', 'Xayah (33% split WR)']
+      },
+      {
+        id: 'inspired', name: 'Inspired', role: 'JGL', resilience: 'IMMUNE (DEEP POOL)',
+        gdByGame: ['+410g', '+390g', '+360g', '+330g', '+350g'],
+        wrByGame: ['71%', '70%', '68%', '66%', '67%'],
+        comfort: [
+          { name: 'Vi', lockedAt: 1 },
+          { name: 'Sejuani', lockedAt: 2 },
+          { name: 'Maokai', lockedAt: 3 },
+          { name: 'Skarner', lockedAt: 4 },
+          { name: 'Ivern', lockedAt: 99 },
+          { name: 'Viego', lockedAt: 99 },
+          { name: 'Fiddlesticks', lockedAt: 99 }
+        ],
+        pockets: ['Do NOT waste Phase-2 pinch bans on Jungle—Inspired maintains +330g GD@15 in G4/G5.']
+      },
+      {
+        id: 'bwipo', name: 'Bwipo', role: 'TOP', resilience: 'VOLATILE WILDCARD',
+        gdByGame: ['+190g', '+140g', '+110g', '-80g', '+120g'],
+        wrByGame: ['62%', '59%', '55%', '48%', '55%'],
+        comfort: [
+          { name: 'Rumble', lockedAt: 1 },
+          { name: 'Renekton', lockedAt: 2 },
+          { name: 'Gnar', lockedAt: 3 },
+          { name: 'Olaf', lockedAt: 5 },
+          { name: 'Mordekaiser', lockedAt: 99 },
+          { name: 'Urgot', lockedAt: 99 }
+        ],
+        pockets: ['Sett / Cho’Gath counter-picks on R5']
+      }
+    ];
+
+    const PLANS = [
+      {
+        id: 'take',
+        title: 'Plan A: Selfish S-Tier Opener (Ignore Series Starvation)',
+        summary: 'C9 locks Vi/Skarner + Bot prio in G1–G2, leaving Quad to rotate slowly through only 2 AP mages.',
+        g4Impact: 'Quad enters Game 4 with Galio + Taliyah + Hwei all open (3 comfort AP control mages remaining).',
+        verdict: 'Higher G1 edge, but zero Game-4 Mid pool cliff.'
+      },
+      {
+        id: 'starve',
+        title: 'Plan B: Series "Starve" Handshake (Recommended Staff Line)',
+        summary: 'Handshake Azir vs Orianna in G1 and contest Galio/Taliyah in G2–G3 so 4 Tier-1 AP mids burn before Game 4.',
+        g4Impact: 'By Game 4 (30 Fearless locks), two Phase-2 bans (Hwei + Syndra) strip 100% of Quad’s proven AP waveclear!',
+        verdict: 'Forces rusty Cassiopeia OR 84%-AD Tristana Mid comp trap in G4.'
+      }
+    ];
+
+    const state = {
+      game: 4,
+      step: 0,
+      selectedPlayer: 'quad',
+      plan: 'starve',
+      pinchBans: new Set(['Hwei', 'Syndra'])
+    };
+
+    function setStep(idx) {
+      state.step = Math.max(0, Math.min(2, idx));
+      document.querySelectorAll('.step-tab').forEach((b, i) => b.classList.toggle('active', i === state.step));
+      for (let i = 0; i < 3; i++) document.getElementById('view-' + i).classList.toggle('hidden', i !== state.step);
+      document.getElementById('prevBtn').disabled = state.step === 0;
+      document.getElementById('nextBtn').textContent = state.step === 2 ? 'Back to Step 1 ↺' : 'Next View →';
+      renderAll();
+    }
+
+    function renderAll() {
+      const lockedTotal = (state.game - 1) * 10;
+      document.getElementById('lockSummaryText').textContent =
+        `Game ${state.game} State: ${lockedTotal} Fearless-Locked Champions + 10 Standard Bans = ${lockedTotal + 10} Champions Unavailable`;
+      document.querySelectorAll('.g-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.g) === state.game));
+
+      document.getElementById('decayList').innerHTML = PLAYERS.map(p => {
+        const gIdx = state.game - 1;
+        const gd = p.gdByGame[gIdx];
+        const wr = p.wrByGame[gIdx];
+        const isCliff = gd.startsWith('-');
+        return `
+          <div class="role-row ${p.id === state.selectedPlayer ? 'active' : ''}" data-player="${p.id}">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+              <strong>${p.name} <span style="font-family:var(--mono);color:var(--muted)">(${p.role})</span></strong>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span class="tag ${isCliff ? 'cliff' : 'safe'}">G${state.game} Avg: ${gd} • ${wr} WR</span>
+                <span class="eyebrow">${p.resilience}</span>
+              </div>
+            </div>
+            <div class="chips">
+              ${p.comfort.map(c => {
+                const isLocked = c.lockedAt < state.game;
+                const isPinch = !isLocked && state.pinchBans.has(c.name);
+                return `<span class="chip ${isLocked ? 'locked' : ''} ${isPinch ? 'pinch' : ''}">${c.name}${isLocked ? ' (G' + c.lockedAt + ')' : isPinch ? ' [Pinch Ban]' : ''}</span>`;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('planGrid').innerHTML = PLANS.map(pl => `
+        <div class="plan-box ${state.plan === pl.id ? 'active' : ''}" data-plan="${pl.id}">
+          <div class="eyebrow" style="margin-bottom:6px">${state.plan === pl.id ? '✓ Active Series Strategy' : 'Click to Compare'}</div>
+          <h3 style="font-size:15px;margin-bottom:8px">${pl.title}</h3>
+          <p class="sub" style="margin-bottom:10px">${pl.summary}</p>
+          <div class="math-box">${pl.g4Impact}</div>
+          <span class="tag ${pl.id === 'starve' ? 'safe' : 'warn'}">${pl.verdict}</span>
+        </div>
+      `).join('');
+
+      const quad = PLAYERS[0];
+      const openComfort = quad.comfort.filter(c => c.lockedAt >= state.game && !state.pinchBans.has(c.name));
+      document.getElementById('cliffForecaster').innerHTML = `
+        <div class="role-row" style="cursor:default">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong>Target Pinch Role: FlyQuest Mid (Quad) — Game ${state.game}</strong>
+            <span class="tag ${openComfort.length === 0 ? 'cliff' : 'warn'}">
+              ${openComfort.length === 0 ? '🚨 POOL CLIFF TRIGGERED (0 Proven AP Comfort Left)' : openComfort.length + ' Comfort Picks Still Open'}
+            </span>
+          </div>
+          <p class="sub">Click available comfort chips below to toggle Phase-2 Pinch Bans (R4/B4/B5):</p>
+          <div class="chips" style="margin-bottom:12px">
+            ${quad.comfort.map(c => {
+              const isLocked = c.lockedAt < state.game;
+              const isPinch = state.pinchBans.has(c.name);
+              return `<span class="chip ${isLocked ? 'locked' : ''} ${isPinch ? 'pinch' : ''}" data-toggleban="${isLocked ? '' : c.name}" style="cursor:${isLocked ? 'not-allowed' : 'pointer'}">
+                ${c.name} ${isLocked ? '(Locked G' + c.lockedAt + ')' : isPinch ? '✕ Phase-2 Ban' : '+ Click to Ban'}
+              </span>`;
+            }).join('')}
+          </div>
+          <div class="eyebrow" style="margin-bottom:6px">Forced Fallback Pocket Picks &amp; Comp Shape Audit (#11):</div>
+          <div class="chips">
+            ${quad.pockets.map(pk => `<span class="chip pocket">${pk}</span>`).join('')}
+          </div>
+        </div>
+      `;
+
+      const sel = PLAYERS.find(x => x.id === state.selectedPlayer) || PLAYERS[0];
+      document.getElementById('cliffInspector').innerHTML = `
+        <div class="eyebrow">Series Starvation Telemetry</div>
+        <h3 style="font-size:16px;margin:4px 0">${sel.name} (${sel.role}) — Game ${state.game}</h3>
+        <p class="sub">G1→G5 GD@15 trajectory across 745 GRID Fearless series:</p>
+        <div class="math-box">
+          G1: ${sel.gdByGame[0]} (${sel.wrByGame[0]})<br/>
+          G2: ${sel.gdByGame[1]} (${sel.wrByGame[1]})<br/>
+          G3: ${sel.gdByGame[2]} (${sel.wrByGame[2]})<br/>
+          <strong>G4: ${sel.gdByGame[3]} (${sel.wrByGame[3]})</strong><br/>
+          G5: ${sel.gdByGame[4]} (${sel.wrByGame[4]})
+        </div>
+        <div class="math-box" style="border-color:rgba(244,63,94,0.4)">
+          <strong>Comp Shape Auditor (#11):</strong><br/>
+          ${openComfort.length === 0
+            ? 'With Orianna/Azir/Galio/Taliyah Fearless-locked and Hwei/Syndra pinched, FlyQuest loses reliable AP waveclear—forcing Thanatos Armor-stack K’Sante/Ornn value.'
+            : 'Scrub to Game 4+ or apply 2 pinch bans on Quad to see the AP damage starvation trap.'}
+        </div>
+      `;
+    }
+
+    document.getElementById('gameBtns').addEventListener('click', e => {
+      const b = e.target.closest('.g-btn');
+      if (b) { state.game = Number(b.dataset.g); renderAll(); }
+    });
+    document.getElementById('stepTabs').addEventListener('click', e => {
+      const b = e.target.closest('.step-tab');
+      if (b) setStep(Number(b.dataset.step));
+    });
+    document.getElementById('prevBtn').onclick = () => setStep(state.step - 1);
+    document.getElementById('nextBtn').onclick = () => setStep(state.step === 2 ? 0 : state.step + 1);
+    document.body.addEventListener('click', e => {
+      const p = e.target.closest('[data-player]');
+      if (p) { state.selectedPlayer = p.dataset.player; renderAll(); return; }
+      const pl = e.target.closest('[data-plan]');
+      if (pl) { state.plan = pl.dataset.plan; renderAll(); return; }
+      const tb = e.target.closest('[data-toggleban]');
+      if (tb && tb.dataset.toggleban) {
+        const name = tb.dataset.toggleban;
+        if (state.pinchBans.has(name)) state.pinchBans.delete(name);
+        else state.pinchBans.add(name);
+        renderAll();
+      }
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') setStep(Math.min(2, state.step + 1));
+      if (e.key === 'ArrowLeft') setStep(Math.max(0, state.step - 1));
+    });
+    setStep(0);
+  </script>
+</body>
+</html>
