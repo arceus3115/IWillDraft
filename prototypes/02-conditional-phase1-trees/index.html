@@ -3,155 +3,317 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>02 — Conditional Phase-1 Opening Response Trees | IWillDraft</title>
+  <title>Phase-1 Draft Trees | IWillDraft</title>
   <style>
     :root {
-      --bg: #0b1017;
-      --panel: #121a24;
-      --panel-2: #172231;
-      --border: #243347;
+      --bg: #0b0f15;
+      --surface: #111822;
+      --surface-2: #16202e;
+      --border: #1f2d40;
       --accent: #38bdf8;
       --accent-dim: rgba(56, 189, 248, 0.14);
-      --red: #f43f5e;
-      --red-dim: rgba(244, 63, 94, 0.15);
       --green: #10b981;
       --green-dim: rgba(16, 185, 129, 0.14);
       --amber: #f59e0b;
       --amber-dim: rgba(245, 158, 11, 0.15);
-      --text: #e2e8f0;
+      --red: #f43f5e;
+      --red-dim: rgba(244, 63, 94, 0.15);
+      --text: #f1f5f9;
       --muted: #94a3b8;
       --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      --target-size: 24px;
+    }
+    @media (pointer: coarse) {
+      :root { --target-size: 44px; }
+    }
+    html {
+      container-type: scroll-state;
+      scroll-padding-top: 3.5rem;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.45; }
-    .topnav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 20px; background: #080c12; border-bottom: 1px solid var(--border); font-size: 12px; }
-    .topnav a { color: var(--muted); text-decoration: none; padding: 4px 10px; border-radius: 6px; border: 1px solid transparent; }
-    .topnav a:hover { color: var(--text); background: var(--panel); }
-    .topnav a.active { color: var(--accent); background: var(--accent-dim); border-color: rgba(56,189,248,0.35); font-weight: 600; }
-    .shell { max-width: 1360px; margin: 0 auto; padding: 20px; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
-    .eyebrow { font-family: var(--mono); font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.07em; }
-    h1 { font-size: 23px; margin: 4px 0; }
-    .sub { font-size: 13px; color: var(--muted); }
-    button, select {
-      font-family: inherit; font-size: 12.5px; color: var(--text);
-      background: var(--panel); border: 1px solid var(--border); border-radius: 7px;
-      padding: 7px 12px; cursor: pointer;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-block-size: 100svh;
+      line-height: 1.45;
+      overflow-wrap: break-word;
     }
-    button:hover, select:hover { border-color: var(--accent); }
-    button.primary { background: var(--accent-dim); color: var(--accent); border-color: rgba(56,189,248,0.45); font-weight: 600; }
-    .stepper { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; flex-wrap: wrap; }
-    .step-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
-    .step-tab { padding: 7px 13px; border-radius: 7px; font-size: 12.5px; font-weight: 600; background: transparent; border: 1px solid transparent; color: var(--muted); }
-    .step-tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(56,189,248,0.4); }
-    .workspace { display: grid; grid-template-columns: 1fr 360px; gap: 18px; align-items: start; }
-    @media (max-width: 1024px) { .workspace { grid-template-columns: 1fr; } }
-    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 11px; padding: 18px; }
-    .tree-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 14px; }
-    @media (max-width: 820px) { .tree-cols { grid-template-columns: 1fr; } }
-    .col-head { font-family: var(--mono); font-size: 11px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    h1, h2, h3 { text-wrap: balance; }
+    p, li { text-wrap: pretty; }
+    :where(button, select, nav a, summary) {
+      min-block-size: var(--target-size);
+      min-inline-size: var(--target-size);
+    }
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 8px 20px;
+      background: rgba(8, 12, 18, 0.94);
+      border-block-end: 1px solid var(--border);
+      font-size: 0.8rem;
+      transition: transform 0.2s ease;
+    }
+    @container scroll-state((scrolled: bottom) and (scrollable: top)) {
+      .topnav { transform: translateY(-100%); }
+    }
+    .topnav:focus-within { transform: none; }
+    .topnav.is-hidden:not(:focus-within) { transform: translateY(-100%); }
+    .topnav a {
+      display: inline-flex;
+      align-items: center;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .topnav a:hover { color: var(--text); background: var(--surface); }
+    .topnav a[aria-current="page"] { color: var(--accent); background: var(--accent-dim); font-weight: 600; }
+
+    .shell { max-inline-size: 1200px; margin-inline: auto; padding: 20px; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-block-end: 16px;
+    }
+    h1 { font-size: 1.4rem; letter-spacing: -0.02em; }
+    select, button {
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    select:hover, button:hover { border-color: var(--accent); }
+
+    .tablist {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 4px;
+      border-block-end: 1px solid var(--border);
+      margin-block-end: 18px;
+      scrollbar-width: none;
+    }
+    .tablist::-webkit-scrollbar { display: none; }
+    [role="tab"] {
+      flex: none;
+      position: relative;
+      background: transparent;
+      border: none;
+      border-radius: 6px 6px 0 0;
+      padding: 10px 14px;
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    [role="tab"]:hover { color: var(--text); }
+    [role="tab"][aria-selected="true"] { color: var(--accent); }
+    [role="tab"][aria-selected="true"]::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      border-block-end: 2px solid var(--accent);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 18px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .tree-wrap { container-type: inline-size; }
+    .tree-cols {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @container (inline-size >= 620px) {
+      .tree-cols { grid-template-columns: repeat(3, 1fr); }
+    }
+    .col-head {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-block-end: 8px;
+      padding-block-end: 6px;
+      border-block-end: 1px solid var(--border);
+    }
     .node {
-      background: #0e151f; border: 1px solid var(--border); border-radius: 9px; padding: 12px;
-      margin-bottom: 10px; cursor: pointer; transition: border-color 0.12s, background 0.12s;
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 12px;
+      margin-block-end: 8px;
+      color: var(--text);
     }
-    .node:hover { background: var(--panel-2); }
-    .node.active-blue { border-color: var(--accent); background: rgba(56,189,248,0.1); }
-    .node.active-red { border-color: var(--red); background: rgba(244,63,94,0.1); }
-    .node-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-    .pct { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent); }
+    .node:hover { background: var(--surface-2); border-color: var(--border); }
+    .node.active-blue { border-color: var(--accent); background: rgba(56, 189, 248, 0.1); }
+    .node.active-red { border-color: var(--red); background: rgba(244, 63, 94, 0.1); }
+    .node-static { cursor: default; }
+    .node-static:hover { background: var(--bg); }
+    .node-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-block-end: 5px;
+    }
+    .pct { font-family: var(--mono); font-size: 0.8rem; font-weight: 700; color: var(--accent); }
     .pct.red { color: #fb7185; }
-    .bar { height: 5px; background: #1c293a; border-radius: 4px; overflow: hidden; margin: 6px 0; }
+    .bar { height: 4px; background: #1c293a; border-radius: 4px; overflow: hidden; margin: 6px 0; }
     .bar > div { height: 100%; background: var(--accent); }
     .bar.red > div { background: var(--red); }
-    .flex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 14px; }
-    .tag { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px; }
+
+    .flex-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 10px;
+    }
+    .tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 5px;
+    }
     .tag.bluff { color: var(--amber); background: var(--amber-dim); }
     .tag.trueflex { color: var(--green); background: var(--green-dim); }
-    .ribbon { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
-    .slot { font-family: var(--mono); font-size: 11px; padding: 4px 7px; border-radius: 5px; background: #0c121b; border: 1px solid var(--border); }
-    .slot.b { border-color: rgba(56,189,248,0.45); color: #7dd3fc; }
-    .slot.r { border-color: rgba(244,63,94,0.45); color: #fda4af; }
-    .math-box { background: #0b1119; border: 1px solid var(--border); border-radius: 8px; padding: 11px; margin: 12px 0; font-family: var(--mono); font-size: 11.5px; color: #cbd5e1; }
-    .kv { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12.5px; }
-    .hidden { display: none !important; }
+    .mono { font-family: var(--mono); font-size: 0.8rem; }
+    .muted { color: var(--muted); font-size: 0.8rem; }
+
+    .kv {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 0;
+      border-block-end: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.84rem;
+    }
+    .callout {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.84rem;
+      margin-block: 12px;
+    }
+    details {
+      margin-block-start: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      padding: 0 12px;
+    }
+    summary {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: var(--muted);
+      padding: 8px 0;
+      user-select: none;
+    }
+    .match-item {
+      padding-block: 8px;
+      border-block-start: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .ribbon { display: flex; gap: 4px; flex-wrap: wrap; margin-block-start: 6px; }
+    .slot {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .slot.b { border-color: rgba(56, 189, 248, 0.4); color: #7dd3fc; }
+    .slot.r { border-color: rgba(244, 63, 94, 0.4); color: #fda4af; }
+    @media (prefers-reduced-motion: reduce) {
+      .topnav { transition: none; }
+    }
   </style>
 </head>
 <body>
-  <nav class="topnav">
-    <a href="../index.html">← All Prototypes</a>
-    <a href="../01-universe-riser-matrix/index.html">01 Universe Riser</a>
-    <a class="active" href="../02-conditional-phase1-trees/index.html">02 Phase-1 Trees</a>
+  <nav class="topnav" aria-label="Tools">
+    <a href="../index.html">← All</a>
+    <a href="../01-universe-riser-matrix/index.html">01 Risers</a>
+    <a aria-current="page" href="../02-conditional-phase1-trees/index.html">02 Draft Trees</a>
     <a href="../03-fearless-pool-cliff-planner/index.html">03 Fearless Cliffs</a>
-    <a href="../04-rift-spatial-pathing-map/index.html">04 Rift Spatial Map</a>
-    <a href="../05-playbook-huddle-stage-binder/index.html">05 Stage Playbook</a>
+    <a href="../04-rift-spatial-pathing-map/index.html">04 Early Pathing</a>
+    <a href="../05-playbook-huddle-stage-binder/index.html">05 Match Day</a>
   </nav>
 
   <div class="shell">
     <header class="header">
-      <div>
-        <div class="eyebrow">Prototype 02 • Brainstorm Idea #7 (+ #8 Flex Bluff Resolver)</div>
-        <h1>Conditional Phase-1 Opening Response Trees</h1>
-        <p class="sub">Scouting FlyQuest's exact conditional Phase-1 branches (B1 → R1/R2 → B2/B3) and true lane assignments from GRID draftActions.</p>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <label class="eyebrow" for="sideMode">Scenario:</label>
-        <select id="sideMode">
-          <option value="c9blue">C9 Kia on Blue (We open B1 → FlyQuest answers R1/R2)</option>
-          <option value="flyblue">FlyQuest on Blue (FlyQuest opens B1 → Our R1/R2 prep)</option>
-        </select>
-      </div>
+      <h1>Phase-1 Draft Trees</h1>
+      <select id="sideMode" aria-label="Draft side">
+        <option value="c9blue">C9 Blue · FLY Red</option>
+        <option value="flyblue">FLY Blue · C9 Red</option>
+      </select>
     </header>
 
-    <div class="stepper">
-      <div class="step-tabs" id="stepTabs">
-        <button class="step-tab active" data-step="0">1. Conditional Opening Tree</button>
-        <button class="step-tab" data-step="1">2. Flex Bluff vs. True-Flex Audit (#8)</button>
-        <button class="step-tab" data-step="2">3. GRID Series Evidence Ribbon</button>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button id="prevBtn">← Prev View</button>
-        <button class="primary" id="nextBtn">Next View →</button>
-      </div>
+    <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Draft tree views" id="tablist">
+      <button type="button" role="tab" id="tab-0" aria-selected="true" focusgroupstart tabindex="0" data-step="0">Opening Tree</button>
+      <button type="button" role="tab" id="tab-1" aria-selected="false" tabindex="-1" data-step="1">Flex Audit</button>
     </div>
 
     <div class="workspace">
-      <main class="card">
-        <!-- STEP 0 -->
-        <section id="view-0">
-          <h2 style="font-size:16px;margin-bottom:4px">Interactive Phase-1 Conditional Branch Explorer</h2>
-          <p class="sub">Click any <strong>B1 Opener</strong> in Column 1, then click an <strong>R1 + R2 Response Pair</strong> in Column 2 to inspect downstream pivots.</p>
-          <div class="tree-cols">
-            <div>
-              <div class="col-head">Pick 1 • Blue B1 Opener</div>
-              <div id="colB1"></div>
-            </div>
-            <div>
-              <div class="col-head">Picks 2–3 • Conditional R1 + R2</div>
-              <div id="colR12"></div>
-            </div>
-            <div>
-              <div class="col-head">Picks 4–6 • B2/B3 &amp; R3 Pivot</div>
-              <div id="colR3"></div>
+      <main>
+        <section role="tabpanel" id="panel-0" aria-labelledby="tab-0">
+          <div class="panel-box tree-wrap">
+            <div class="tree-cols">
+              <div>
+                <div class="col-head">B1 Opener</div>
+                <div id="colB1"></div>
+              </div>
+              <div>
+                <div class="col-head">R1 / R2 Response</div>
+                <div id="colR12"></div>
+              </div>
+              <div>
+                <div class="col-head">Next Pivot</div>
+                <div id="colR3"></div>
+              </div>
             </div>
           </div>
         </section>
 
-        <!-- STEP 1 -->
-        <section id="view-1" class="hidden">
-          <h2 style="font-size:16px;margin-bottom:4px">Flex-Pick Bluff vs. Final-Lane Resolver</h2>
-          <p class="sub">Resolved automatically from GRID 0:00–5:00 {x,y} coordinates &amp; Smite/World Atlas items—never static player-role JSON.</p>
-          <div class="flex-grid" id="flexGrid"></div>
-        </section>
-
-        <!-- STEP 2 -->
-        <section id="view-2" class="hidden">
-          <h2 style="font-size:16px;margin-bottom:4px">Underlying GRID Match Evidence (Selected Branch)</h2>
-          <p class="sub">Every branch frequency links directly to verifiable tournament draft ribbons so coaches never trust small-sample averages blindly.</p>
-          <div id="evidenceList" style="margin-top:14px"></div>
+        <section role="tabpanel" id="panel-1" aria-labelledby="tab-1" hidden="until-found">
+          <div class="panel-box">
+            <div class="flex-grid" id="flexGrid"></div>
+          </div>
         </section>
       </main>
 
-      <aside class="card" id="branchInspector"></aside>
+      <aside class="panel-box" id="branchInspector" aria-live="polite"></aside>
     </div>
   </div>
 
@@ -159,65 +321,68 @@
     const TREE = {
       c9blue: [
         {
-          id: 'aurora', b1: 'Aurora (B1)', games: 11, share: '38%', note: 'C9 high-prio Mid/Top opener',
+          id: 'aurora', b1: 'Aurora', games: 11, share: '38%',
           r12: [
             {
-              id: 'vi-galio', pair: 'Vi + Galio', freq: '64% (7/11)', wr: '71% FLY WR', gd15: '+640g FLY',
+              id: 'vi-galio', pair: 'Vi + Galio', freq: '64%', count: '7/11', wr: '71% FLY', gd15: '+640g',
+              counter: 'Ban Galio Phase 1 or answer B2 Poppy to break Vi + Galio dive.',
               pivots: [
-                { label: 'FlyQuest R3: Ashe / Kalista (Bot prio)', detail: 'Locks pushing 2v2 so Inspired Vi invades w/ Galio R.' },
-                { label: 'Counter Prep: Ban Galio Phase-1 or B2 Poppy', detail: 'Poppy W breaks both Vi Q and Galio E engage.' }
+                { label: 'FLY R3: Ashe / Kalista', detail: 'Locks pushing 2v2 for Inspired invades with Galio R.' },
+                { label: 'C9 Counter: B2 Poppy', detail: 'W stops both Vi Q and Galio E engage.' }
               ],
               matches: [
-                { sid: 'series_2691188', stage: 'LCS 2026 Split 2', patch: '26.14', res: 'FLY Win (31:12)', seq: ['B1 Aurora', 'R1 Vi', 'R2 Galio', 'B2 Ezreal', 'B3 Leona', 'R3 Rumble'] },
-                { sid: 'series_2691042', stage: 'LCS 2026 Split 2', patch: '26.13', res: 'FLY Win (29:44)', seq: ['B1 Aurora', 'R1 Vi', 'R2 Galio', 'B2 KaiSa', 'B3 Rell', 'R3 Gnar'] }
+                { meta: '26.14 · FLY Win (31:12)', seq: ['B1 Aurora', 'R1 Vi', 'R2 Galio', 'B2 Ezreal', 'B3 Leona', 'R3 Rumble'] },
+                { meta: '26.13 · FLY Win (29:44)', seq: ['B1 Aurora', 'R1 Vi', 'R2 Galio', 'B2 KaiSa', 'B3 Rell', 'R3 Gnar'] }
               ]
             },
             {
-              id: 'skarner-ori', pair: 'Skarner + Orianna', freq: '27% (3/11)', wr: '33% FLY WR', gd15: '-420g FLY',
+              id: 'skarner-ori', pair: 'Skarner + Orianna', freq: '27%', count: '3/11', wr: '33% FLY', gd15: '-420g',
+              counter: 'Favorable branch: Quad defaults to immobile Orianna when Galio is gone.',
               pivots: [
-                { label: 'FlyQuest R3: Renekton (Top blind)', detail: 'Slower mid tempo; struggles to contest 6:00 Grubs.' },
-                { label: 'Coach Takeaway: Favorable branch for C9', detail: 'If Galio is banned, Quad defaults to immobile Orianna.' }
+                { label: 'FLY R3: Renekton', detail: 'Slower mid tempo; weak 6:00 Grub contest.' }
               ],
               matches: [
-                { sid: 'series_2691305', stage: 'LCS 2026 Split 3', patch: '26.18', res: 'C9 Win (33:05)', seq: ['B1 Aurora', 'R1 Skarner', 'R2 Orianna', 'B2 Nocturne', 'B3 Rell', 'R3 Renekton'] }
+                { meta: '26.18 · C9 Win (33:05)', seq: ['B1 Aurora', 'R1 Skarner', 'R2 Orianna', 'B2 Nocturne', 'B3 Rell', 'R3 Renekton'] }
               ]
             }
           ]
         },
         {
-          id: 'yone', b1: 'Yone (B1)', games: 9, share: '31%', note: 'AD Mid carry opener',
+          id: 'yone', b1: 'Yone', games: 9, share: '31%',
           r12: [
             {
-              id: 'sej-renek', pair: 'Sejuani + Renekton', freq: '56% (5/9)', wr: '60% FLY WR', gd15: '+310g FLY',
+              id: 'sej-renek', pair: 'Sejuani + Renekton', freq: '56%', count: '5/9', wr: '60% FLY', gd15: '+310g',
+              counter: 'Hold AP Jungle or Top to avoid a double-AD solo trap.',
               pivots: [
-                { label: 'FlyQuest R3: Taliyah / Cassiopeia', detail: 'Punishes Yone dash in Mid + activates Sejuani E.' },
-                { label: 'Coach Takeaway: Hold AP Jgl or Top', detail: 'Avoid double-AD solo trap when locking B1 Yone.' }
+                { label: 'FLY R3: Taliyah / Cassiopeia', detail: 'Punishes Yone dash and activates Sejuani E.' }
               ],
               matches: [
-                { sid: 'series_2690890', stage: 'LCS 2026 Split 1', patch: '26.06', res: 'FLY Win (34:50)', seq: ['B1 Yone', 'R1 Sejuani', 'R2 Renekton', 'B2 Zyra', 'B3 Ashe', 'R3 Taliyah'] }
+                { meta: '26.06 · FLY Win (34:50)', seq: ['B1 Yone', 'R1 Sejuani', 'R2 Renekton', 'B2 Zyra', 'B3 Ashe', 'R3 Taliyah'] }
               ]
             },
             {
-              id: 'maokai-tris', pair: 'Maokai + Tristana', freq: '33% (3/9)', wr: '67% FLY WR', gd15: '+280g FLY',
+              id: 'maokai-tris', pair: 'Maokai + Tristana', freq: '33%', count: '3/9', wr: '67% FLY', gd15: '+280g',
+              counter: 'Maokai is 100% Inspired Jungle here—draft Bot lane freely.',
               pivots: [
-                { label: 'FlyQuest R3: Braum / Alistar', detail: 'Maokai flexes Support 0% here—100% Inspired Jungle.' }
+                { label: 'FLY R3: Braum / Alistar', detail: 'Pairs frontline peel with Tristana.' }
               ],
               matches: [
-                { sid: 'series_2690912', stage: 'LCS 2026 Split 1', patch: '26.07', res: 'FLY Win (28:19)', seq: ['B1 Yone', 'R1 Maokai', 'R2 Tristana', 'B2 Vi', 'B3 Rakan', 'R3 Alistar'] }
+                { meta: '26.07 · FLY Win (28:19)', seq: ['B1 Yone', 'R1 Maokai', 'R2 Tristana', 'B2 Vi', 'B3 Rakan', 'R3 Alistar'] }
               ]
             }
           ]
         },
         {
-          id: 'skarner', b1: 'Skarner (B1)', games: 8, share: '28%', note: 'Blaber frontline tempo opener',
+          id: 'skarner', b1: 'Skarner', games: 8, share: '28%',
           r12: [
             {
-              id: 'varus-rell', pair: 'Varus + Rell', freq: '63% (5/8)', wr: '40% FLY WR', gd15: '-190g FLY',
+              id: 'varus-rell', pair: 'Varus + Rell', freq: '63%', count: '5/8', wr: '40% FLY', gd15: '-190g',
+              counter: 'Prepare for Bwipo R3 Olaf or Mordekaiser into Skarner R.',
               pivots: [
-                { label: 'FlyQuest R3: Olaf / Mordekaiser (Bwipo)', detail: 'Bwipo counter-picks into Skarner R suppression.' }
+                { label: 'FLY R3: Olaf / Mordekaiser', detail: 'Bwipo counter-picks into Skarner suppression.' }
               ],
               matches: [
-                { sid: 'series_2691410', stage: 'LCS 2026 Split 3', patch: '26.19', res: 'C9 Win (30:41)', seq: ['B1 Skarner', 'R1 Varus', 'R2 Rell', 'B2 Azir', 'B3 Xayah', 'R3 Olaf'] }
+                { meta: '26.19 · C9 Win (30:41)', seq: ['B1 Skarner', 'R1 Varus', 'R2 Rell', 'B2 Azir', 'B3 Xayah', 'R3 Olaf'] }
               ]
             }
           ]
@@ -225,29 +390,31 @@
       ],
       flyblue: [
         {
-          id: 'fly-vi', b1: 'FlyQuest B1: Vi', games: 10, share: '42%', note: 'Inspired #1 Blue-side priority',
+          id: 'fly-vi', b1: 'FLY B1: Vi', games: 10, share: '42%',
           r12: [
             {
-              id: 'c9-poppy-jinx', pair: 'Best C9 R1/R2: Poppy + Jinx', freq: '40% historical', wr: '25% FLY WR', gd15: '-510g FLY',
+              id: 'c9-poppy-jinx', pair: 'Poppy + Jinx', freq: '40%', count: '4/10', wr: '25% FLY', gd15: '-510g',
+              counter: 'Denying Galio or taking Poppy breaks FlyQuest dive layering.',
               pivots: [
-                { label: 'FlyQuest B2/B3 Habit: Galio + Ashe (70%)', detail: 'Denying Poppy or Galio breaks FlyQuest dive layering.' }
+                { label: 'FLY B2/B3: Galio + Ashe (70%)', detail: 'Locks global dive follow-up on Vi R.' }
               ],
               matches: [
-                { sid: 'series_2691512', stage: 'LCS 2026 Split 3', patch: '26.19', res: 'C9 Win (32:08)', seq: ['B1 Vi', 'R1 Poppy', 'R2 Jinx', 'B2 Ahri', 'B3 Ezreal', 'R3 Braum'] }
+                { meta: '26.19 · C9 Win (32:08)', seq: ['B1 Vi', 'R1 Poppy', 'R2 Jinx', 'B2 Ahri', 'B3 Ezreal', 'R3 Braum'] }
               ]
             }
           ]
         },
         {
-          id: 'fly-aurora', b1: 'FlyQuest B1: Aurora', games: 9, share: '38%', note: 'Shown as Top/Mid flex in Phase 1',
+          id: 'fly-aurora', b1: 'FLY B1: Aurora', games: 9, share: '38%',
           r12: [
             {
-              id: 'c9-galio-j4', pair: 'C9 Answer: Galio + Jarvan IV', freq: '55% historical', wr: '33% FLY WR', gd15: '-290g FLY',
+              id: 'c9-galio-j4', pair: 'Galio + Jarvan IV', freq: '55%', count: '5/9', wr: '33% FLY', gd15: '-290g',
+              counter: '89% Mid bluff (Quad). Hold Top counter for Bwipo B5.',
               pivots: [
-                { label: '89% Bluff Alert: Goes Mid (Quad), NOT Top', detail: 'Do not burn Bwipo counter early—Bwipo holds R5/B5 carry.' }
+                { label: '89% Quad Mid (Not Top)', detail: 'Do not burn Top counter early.' }
               ],
               matches: [
-                { sid: 'series_2691220', stage: 'LCS 2026 Split 2', patch: '26.15', res: 'C9 Win (35:22)', seq: ['B1 Aurora', 'R1 Galio', 'R2 Jarvan IV', 'B2 Kalista', 'B3 Renata', 'R3 Gnar'] }
+                { meta: '26.15 · C9 Win (35:22)', seq: ['B1 Aurora', 'R1 Galio', 'R2 Jarvan IV', 'B2 Kalista', 'B3 Renata', 'R3 Gnar'] }
               ]
             }
           ]
@@ -256,22 +423,34 @@
     };
 
     const FLEX_PICKS = [
-      { champ: 'Aurora', picks: 9, verdict: 'BLUFF', split: '89% Mid (Quad) • 11% Top (Bwipo)', note: 'Hovered by Bwipo until 0:20 swap in 7/9 games, but Quad pilots it 8/9 times. Safe to draft Mid answer in Phase 1.' },
-      { champ: 'Poppy', picks: 12, verdict: 'TRUE FLEX', split: '50% Sup (Busio) • 33% Jgl (Inspired) • 17% Top (Bwipo)', note: 'Genuine 3-way flex. Inspired takes Smite Poppy whenever enemy locks 2+ dash carries in Phase 1.' },
-      { champ: 'Maokai', picks: 8, verdict: 'BLUFF', split: '100% Jgl (Inspired) • 0% Sup / 0% Top', note: 'Zero support Maokai games in 2026 Role-Quest ruleset. Locks Inspired Jungle immediately.' },
-      { champ: 'Rumble', picks: 7, verdict: 'BLUFF', split: '86% Top (Bwipo) • 14% Mid (Quad)', note: 'Quad only played 1 Mid Rumble game (Patch 25.19). Treat Phase-1 Rumble strictly as Bwipo Top.' }
+      { champ: 'Aurora', verdict: 'BLUFF', split: '89% Mid · 11% Top', note: 'Safe to answer Mid in Phase 1; Bwipo rarely plays it.' },
+      { champ: 'Poppy', verdict: 'TRUE FLEX', split: '50% Sup · 33% Jgl · 17% Top', note: 'Genuine 3-way flex; goes Jungle into 2+ dash carries.' },
+      { champ: 'Maokai', verdict: 'BLUFF', split: '100% Jgl · 0% Sup', note: 'Locks Inspired Jungle immediately.' },
+      { champ: 'Rumble', verdict: 'BLUFF', split: '86% Top · 14% Mid', note: 'Treat Phase-1 Rumble as Bwipo Top.' }
     ];
 
     const state = { step: 0, mode: 'c9blue', b1Idx: 0, r12Idx: 0 };
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    const panels = [...document.querySelectorAll('[role="tabpanel"]')];
 
-    function setStep(idx) {
-      state.step = Math.max(0, Math.min(2, idx));
-      document.querySelectorAll('.step-tab').forEach((b, i) => b.classList.toggle('active', i === state.step));
-      for (let i = 0; i < 3; i++) document.getElementById('view-' + i).classList.toggle('hidden', i !== state.step);
-      document.getElementById('prevBtn').disabled = state.step === 0;
-      document.getElementById('nextBtn').textContent = state.step === 2 ? 'Back to Step 1 ↺' : 'Next View →';
+    function setStep(idx, focusTab = false) {
+      state.step = Math.max(0, Math.min(tabs.length - 1, idx));
+      tabs.forEach((tab, i) => {
+        const active = i === state.step;
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+        tab.toggleAttribute('focusgroupstart', active);
+      });
+      panels.forEach((panel, i) => {
+        if (i === state.step) panel.removeAttribute('hidden');
+        else panel.hidden = 'until-found';
+      });
+      tabs[state.step].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      if (focusTab) tabs[state.step].focus();
       renderAll();
     }
+
+    panels.forEach((panel, i) => panel.addEventListener('beforematch', () => setStep(i)));
 
     function renderAll() {
       const branches = TREE[state.mode];
@@ -279,88 +458,94 @@
       const r12 = b1.r12[state.r12Idx] || b1.r12[0];
 
       document.getElementById('colB1').innerHTML = branches.map((item, idx) => `
-        <div class="node ${idx === state.b1Idx ? 'active-blue' : ''}" data-b1="${idx}">
+        <button type="button" class="node ${idx === state.b1Idx ? 'active-blue' : ''}" data-b1="${idx}">
           <div class="node-top"><strong>${item.b1}</strong><span class="pct">${item.share}</span></div>
-          <div class="bar"><div style="width:${parseInt(item.share)}%"></div></div>
-          <div class="sub" style="font-size:11.5px">${item.games} GRID games • ${item.note}</div>
-        </div>
+          <div class="bar"><div style="width:${parseInt(item.share, 10)}%"></div></div>
+          <div class="muted">${item.games} games</div>
+        </button>
       `).join('');
 
       document.getElementById('colR12').innerHTML = b1.r12.map((item, idx) => `
-        <div class="node ${idx === state.r12Idx ? 'active-red' : ''}" data-r12="${idx}">
+        <button type="button" class="node ${idx === state.r12Idx ? 'active-red' : ''}" data-r12="${idx}">
           <div class="node-top"><strong>${item.pair}</strong><span class="pct red">${item.freq}</span></div>
-          <div class="bar red"><div style="width:${parseInt(item.freq)}%"></div></div>
-          <div class="sub" style="font-size:11.5px">${item.wr} • Avg @15: <span style="font-family:var(--mono)">${item.gd15}</span></div>
-        </div>
+          <div class="bar red"><div style="width:${parseInt(item.freq, 10)}%"></div></div>
+          <div class="muted">${item.wr} · <span class="mono">${item.gd15}</span></div>
+        </button>
       `).join('');
 
       document.getElementById('colR3').innerHTML = r12.pivots.map(p => `
-        <div class="node" style="cursor:default">
-          <strong style="font-size:13px;display:block;margin-bottom:4px">${p.label}</strong>
-          <p class="sub" style="font-size:12px">${p.detail}</p>
+        <div class="node node-static">
+          <strong style="font-size:0.86rem;display:block;margin-block-end:4px">${p.label}</strong>
+          <p class="muted">${p.detail}</p>
         </div>
       `).join('');
 
       document.getElementById('flexGrid').innerHTML = FLEX_PICKS.map(f => `
-        <div class="node" style="cursor:default">
+        <div class="node node-static">
           <div class="node-top">
-            <strong style="font-size:15px">${f.champ}</strong>
+            <strong>${f.champ}</strong>
             <span class="tag ${f.verdict === 'BLUFF' ? 'bluff' : 'trueflex'}">${f.verdict}</span>
           </div>
-          <div style="font-family:var(--mono);font-size:11.5px;color:var(--accent);margin:6px 0">${f.split}</div>
-          <p class="sub" style="font-size:12px">${f.note}</p>
-        </div>
-      `).join('');
-
-      document.getElementById('evidenceList').innerHTML = r12.matches.map(m => `
-        <div class="node" style="cursor:default">
-          <div class="node-top">
-            <strong>${m.stage} • <span style="font-family:var(--mono);color:var(--accent)">${m.sid}</span></strong>
-            <span class="tag trueflex">Patch ${m.patch} • ${m.res}</span>
-          </div>
-          <div class="ribbon">
-            ${m.seq.map(s => `<span class="slot ${s.startsWith('B') ? 'b' : 'r'}">${s}</span>`).join('')}
-          </div>
+          <div class="mono" style="color:var(--accent);margin-block:6px">${f.split}</div>
+          <p class="muted">${f.note}</p>
         </div>
       `).join('');
 
       document.getElementById('branchInspector').innerHTML = `
-        <div class="eyebrow">Junction Scouting Brief</div>
-        <h3 style="font-size:16px;margin:4px 0">${b1.b1} → ${r12.pair}</h3>
-        <p class="sub">Conditional probability replaces misleading flat season pick rates.</p>
-        <div class="math-box">
-          <strong>Why Conditional Trees Matter:</strong><br/>
-          FlyQuest's overall season Galio pick rate is just 18%—but when opponents open <strong>B1 Aurora</strong>, FlyQuest locks <strong>Vi + Galio 64%</strong> of the time.
-        </div>
-        <div class="kv"><span>Conditional Frequency</span><span style="font-family:var(--mono)">${r12.freq}</span></div>
-        <div class="kv"><span>Branch Outcome</span><span style="font-family:var(--mono)">${r12.wr}</span></div>
-        <div class="kv"><span>15:00 Gold Diff</span><span style="font-family:var(--mono)">${r12.gd15}</span></div>
-        <div class="kv"><span>Verified Matches</span><span style="font-family:var(--mono)">${r12.matches.length} linked logs</span></div>
-        <button class="primary" style="width:100%;margin-top:12px" id="jumpEvidenceBtn">Inspect Match Ribbons (Step 3) →</button>
+        <h2 style="font-size:1.05rem;margin-block-end:8px">${b1.b1} → ${r12.pair}</h2>
+        <div class="kv"><span>Frequency</span><span class="mono">${r12.freq} (${r12.count})</span></div>
+        <div class="kv"><span>Win Rate</span><span class="mono">${r12.wr}</span></div>
+        <div class="kv"><span>GD@15</span><span class="mono">${r12.gd15}</span></div>
+        <div class="callout">${r12.counter}</div>
+        <details>
+          <summary>Recent drafts (${r12.matches.length})</summary>
+          ${r12.matches.map(m => `
+            <div class="match-item">
+              <div class="muted">${m.meta}</div>
+              <div class="ribbon">
+                ${m.seq.map(s => `<span class="slot ${s.startsWith('B') ? 'b' : 'r'}">${s}</span>`).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </details>
       `;
-      document.getElementById('jumpEvidenceBtn').onclick = () => setStep(2);
     }
 
-    document.getElementById('stepTabs').addEventListener('click', e => {
-      const b = e.target.closest('.step-tab');
+    document.getElementById('tablist').addEventListener('click', e => {
+      const b = e.target.closest('[role="tab"]');
       if (b) setStep(Number(b.dataset.step));
     });
-    document.getElementById('prevBtn').onclick = () => setStep(state.step - 1);
-    document.getElementById('nextBtn').onclick = () => setStep(state.step === 2 ? 0 : state.step + 1);
-    document.getElementById('sideMode').onchange = e => {
-      state.mode = e.target.value; state.b1Idx = 0; state.r12Idx = 0; renderAll();
-    };
+    document.getElementById('tablist').addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); setStep((state.step + 1) % tabs.length, true); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); setStep((state.step - 1 + tabs.length) % tabs.length, true); }
+      else if (e.key === 'Home') { e.preventDefault(); setStep(0, true); }
+      else if (e.key === 'End') { e.preventDefault(); setStep(tabs.length - 1, true); }
+    });
+    document.getElementById('sideMode').addEventListener('change', e => {
+      state.mode = e.target.value;
+      state.b1Idx = 0;
+      state.r12Idx = 0;
+      renderAll();
+    });
     document.body.addEventListener('click', e => {
       const b1 = e.target.closest('[data-b1]');
       if (b1) { state.b1Idx = Number(b1.dataset.b1); state.r12Idx = 0; renderAll(); return; }
       const r12 = e.target.closest('[data-r12]');
       if (r12) { state.r12Idx = Number(r12.dataset.r12); renderAll(); }
     });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'ArrowRight') setStep(Math.min(2, state.step + 1));
-      if (e.key === 'ArrowLeft') setStep(Math.max(0, state.step - 1));
-    });
-    setStep(0);
+
+    if (!CSS.supports('container-type', 'scroll-state')) {
+      const bar = document.querySelector('.topnav');
+      let lastY = scrollY;
+      addEventListener('scroll', () => {
+        const y = Math.max(0, Math.min(scrollY, document.documentElement.scrollHeight - innerHeight));
+        if (y === lastY) return;
+        bar?.classList.toggle('is-hidden', y > lastY && y > bar.offsetHeight);
+        lastY = y;
+      }, { passive: true });
+    }
+
+    renderAll();
   </script>
 </body>
 </html>

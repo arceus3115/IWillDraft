@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>01 — Player Pool x Universe Riser Matrix | IWillDraft</title>
+  <title>Patch Risers | IWillDraft</title>
   <style>
     :root {
-      --bg: #0b1017;
-      --panel: #121a24;
-      --panel-2: #162130;
-      --border: #243347;
+      --bg: #0b0f15;
+      --surface: #111822;
+      --surface-2: #16202e;
+      --border: #1f2d40;
       --accent: #38bdf8;
       --accent-dim: rgba(56, 189, 248, 0.14);
       --green: #10b981;
@@ -18,242 +18,433 @@
       --amber-dim: rgba(245, 158, 11, 0.15);
       --red: #f43f5e;
       --red-dim: rgba(244, 63, 94, 0.15);
-      --text: #e2e8f0;
+      --text: #f1f5f9;
       --muted: #94a3b8;
       --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      --target-size: 24px;
+    }
+    @media (pointer: coarse) {
+      :root { --target-size: 44px; }
+    }
+    html {
+      container-type: scroll-state;
+      scroll-padding-top: 3.5rem;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
-      background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.45;
+      background: var(--bg);
+      color: var(--text);
+      min-block-size: 100svh;
+      line-height: 1.45;
+      overflow-wrap: break-word;
+    }
+    h1, h2, h3 { text-wrap: balance; }
+    p, li { text-wrap: pretty; }
+    :where(button, select, nav a, summary) {
+      min-block-size: var(--target-size);
+      min-inline-size: var(--target-size);
     }
     .topnav {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      padding: 10px 20px; background: #080c12; border-bottom: 1px solid var(--border); font-size: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 8px 20px;
+      background: rgba(8, 12, 18, 0.94);
+      border-block-end: 1px solid var(--border);
+      font-size: 0.8rem;
+      transition: transform 0.2s ease;
     }
+    @container scroll-state((scrolled: bottom) and (scrollable: top)) {
+      .topnav { transform: translateY(-100%); }
+    }
+    .topnav:focus-within { transform: none; }
+    .topnav.is-hidden:not(:focus-within) { transform: translateY(-100%); }
     .topnav a {
-      color: var(--muted); text-decoration: none; padding: 4px 10px; border-radius: 6px;
-      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 6px;
     }
-    .topnav a:hover { color: var(--text); background: var(--panel); }
-    .topnav a.active { color: var(--accent); background: var(--accent-dim); border-color: rgba(56,189,248,0.35); font-weight: 600; }
-    .shell { max-width: 1360px; margin: 0 auto; padding: 20px; }
+    .topnav a:hover { color: var(--text); background: var(--surface); }
+    .topnav a[aria-current="page"] { color: var(--accent); background: var(--accent-dim); font-weight: 600; }
+
+    .shell { max-inline-size: 1200px; margin-inline: auto; padding: 20px; }
     .header {
-      display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
-      flex-wrap: wrap; margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-block-end: 16px;
     }
-    .eyebrow { font-family: var(--mono); font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.07em; }
-    h1 { font-size: 23px; margin: 4px 0; }
-    .sub { font-size: 13px; color: var(--muted); }
-    .controls-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    h1 { font-size: 1.4rem; letter-spacing: -0.02em; }
     select, button {
-      font-family: inherit; font-size: 12.5px; color: var(--text);
-      background: var(--panel); border: 1px solid var(--border); border-radius: 7px;
-      padding: 7px 12px; cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 12px;
+      cursor: pointer;
     }
-    button:hover, select:hover { border-color: var(--accent); }
-    button.primary { background: var(--accent-dim); color: var(--accent); border-color: rgba(56,189,248,0.45); font-weight: 600; }
-    .guardrail {
-      font-size: 11.5px; color: var(--green); background: var(--green-dim);
-      border: 1px solid rgba(16,185,129,0.3); padding: 6px 11px; border-radius: 7px;
+    select:hover, button:hover { border-color: var(--accent); }
+    button.primary {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: rgba(56, 189, 248, 0.45);
+      font-weight: 600;
     }
-    .stepper {
-      display: flex; justify-content: space-between; align-items: center; gap: 12px;
-      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-      padding: 10px 14px; margin-bottom: 18px; flex-wrap: wrap;
+
+    /* Accessible single-row tablist */
+    .tablist {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 4px;
+      border-block-end: 1px solid var(--border);
+      margin-block-end: 18px;
+      scrollbar-width: none;
     }
-    .step-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
-    .step-tab {
-      padding: 7px 13px; border-radius: 7px; font-size: 12.5px; font-weight: 600;
-      background: transparent; border: 1px solid transparent; color: var(--muted);
+    .tablist::-webkit-scrollbar { display: none; }
+    [role="tab"] {
+      flex: none;
+      position: relative;
+      background: transparent;
+      border: none;
+      border-radius: 6px 6px 0 0;
+      padding: 10px 14px;
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-weight: 500;
     }
-    .step-tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(56,189,248,0.4); }
-    .workspace { display: grid; grid-template-columns: 1fr 370px; gap: 18px; align-items: start; }
-    @media (max-width: 1024px) { .workspace { grid-template-columns: 1fr; } }
-    .card {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 11px; padding: 18px;
+    [role="tab"]:hover { color: var(--text); }
+    [role="tab"][aria-selected="true"] {
+      color: var(--accent);
     }
-    .card-title {
-      display: flex; justify-content: space-between; align-items: center; gap: 8px;
-      margin-bottom: 14px; flex-wrap: wrap;
+    [role="tab"][aria-selected="true"]::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      border-block-end: 2px solid var(--accent);
     }
-    .card-title h2 { font-size: 16px; }
-    .pill-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 18px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+    .panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .filter-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-block-end: 14px;
+    }
     .pill {
-      font-size: 11.5px; padding: 4px 10px; border-radius: 999px;
-      background: #0d141d; border: 1px solid var(--border); color: var(--muted); cursor: pointer;
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
     }
-    .pill.active { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .pill[aria-pressed="true"] {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* Responsive table */
+    .table-wrapper {
+      overflow: auto;
+      max-inline-size: 100%;
+      container-type: inline-size;
+    }
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.875rem;
+    }
+    caption {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    thead {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      background: var(--surface);
+    }
     th {
-      text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
-      color: var(--muted); padding: 9px 10px; border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      padding: 8px 10px;
+      border-block-end: 1px solid var(--border);
+      font-weight: 600;
     }
-    td { padding: 11px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    tr.selectable { cursor: pointer; transition: background 0.1s; }
-    tr.selectable:hover { background: var(--panel-2); }
-    tr.selected-row { background: rgba(56, 189, 248, 0.11); }
+    tbody th {
+      position: sticky;
+      inset-inline-start: 0;
+      z-index: 1;
+      background: var(--surface);
+      font-size: 0.9rem;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--text);
+      font-weight: 600;
+    }
+    td {
+      padding: 10px;
+      border-block-end: 1px solid rgba(255, 255, 255, 0.05);
+      vertical-align: middle;
+    }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover th, tbody tr:hover td { background: var(--surface-2); }
+    tbody tr.selected th, tbody tr.selected td { background: rgba(56, 189, 248, 0.1); }
+
+    @container (width < 560px) {
+      table, thead, tbody, tr, th, td { display: block; }
+      thead { display: none; }
+      tr {
+        margin-block-end: 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      tbody th {
+        position: static;
+        background: var(--surface-2);
+        border-block-end: 1px solid var(--border);
+      }
+      td {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border-block-end: 1px solid rgba(255, 255, 255, 0.04);
+      }
+      td::before {
+        color: var(--muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .riser-table td:nth-child(2)::before { content: "Role"; }
+      .riser-table td:nth-child(3)::before { content: "Shift"; }
+      .riser-table td:nth-child(4)::before { content: "Key Buff"; }
+      .riser-table td:nth-child(5)::before { content: "Scrim"; }
+      .lck-table td:nth-child(2)::before { content: "LCK"; }
+      .lck-table td:nth-child(3)::before { content: "LCS"; }
+      .lck-table td:nth-child(4)::before { content: "Gap"; }
+    }
+
     .tag {
-      display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px;
+      display: inline-block;
       font-family: var(--mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 5px;
     }
     .tag.up { color: var(--green); background: var(--green-dim); }
     .tag.warn { color: var(--amber); background: var(--amber-dim); }
     .tag.threat { color: var(--red); background: var(--red-dim); }
-    .tag.c9 { color: var(--accent); background: var(--accent-dim); }
-    .mono { font-family: var(--mono); font-size: 12px; }
-    .matrix-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(245px, 1fr)); gap: 12px; }
-    .m-tile {
-      background: #0e151f; border: 1px solid var(--border); border-radius: 9px; padding: 13px;
-      cursor: pointer; transition: border-color 0.12s, transform 0.12s;
+    .tag.edge { color: var(--accent); background: var(--accent-dim); }
+    .mono { font-family: var(--mono); font-size: 0.8rem; }
+    .muted { color: var(--muted); font-size: 0.82rem; }
+
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
     }
-    .m-tile:hover, .m-tile.active { border-color: var(--accent); transform: translateY(-1px); }
-    .m-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .m-champ { font-weight: 700; font-size: 15px; }
-    .bar-wrap { height: 6px; background: #1c293a; border-radius: 4px; overflow: hidden; margin: 6px 0; }
-    .bar-fill { height: 100%; background: var(--accent); }
-    .inspector h3 { font-size: 15px; margin-bottom: 4px; }
+    .tile {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+    }
+    .tile:hover, .tile.selected { border-color: var(--accent); }
+    .tile-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-block-end: 8px;
+    }
+    .bar { height: 5px; background: #1c293a; border-radius: 4px; overflow: hidden; margin: 6px 0; }
+    .bar > div { height: 100%; background: var(--accent); }
+
+    .scrim-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-block-end: 10px;
+    }
+
+    .inspector h2 { font-size: 1.1rem; margin-block-end: 4px; }
     .kv {
-      display: flex; justify-content: space-between; padding: 7px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12.5px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 0;
+      border-block-end: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.84rem;
     }
-    .math-box {
-      background: #0b1119; border: 1px solid var(--border); border-radius: 8px;
-      padding: 11px; margin: 12px 0; font-family: var(--mono); font-size: 11.5px; color: #cbd5e1;
+    .callout {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.84rem;
+      margin-block: 12px;
     }
-    .scrim-card {
-      background: #0e1622; border: 1px solid var(--border); border-radius: 9px;
-      padding: 13px; margin-bottom: 10px;
+    details {
+      margin-block: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      padding: 0 12px;
     }
-    .hidden { display: none !important; }
+    summary {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: var(--muted);
+      padding: 8px 0;
+      user-select: none;
+    }
+    details p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding-block-end: 10px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .topnav { transition: none; }
+    }
   </style>
 </head>
 <body>
-  <nav class="topnav">
-    <a href="../index.html">← All Prototypes</a>
-    <a class="active" href="../01-universe-riser-matrix/index.html">01 Universe Riser</a>
-    <a href="../02-conditional-phase1-trees/index.html">02 Phase-1 Trees</a>
+  <nav class="topnav" aria-label="Tools">
+    <a href="../index.html">← All</a>
+    <a aria-current="page" href="../01-universe-riser-matrix/index.html">01 Risers</a>
+    <a href="../02-conditional-phase1-trees/index.html">02 Draft Trees</a>
     <a href="../03-fearless-pool-cliff-planner/index.html">03 Fearless Cliffs</a>
-    <a href="../04-rift-spatial-pathing-map/index.html">04 Rift Spatial Map</a>
-    <a href="../05-playbook-huddle-stage-binder/index.html">05 Stage Playbook</a>
+    <a href="../04-rift-spatial-pathing-map/index.html">04 Early Pathing</a>
+    <a href="../05-playbook-huddle-stage-binder/index.html">05 Match Day</a>
   </nav>
 
   <div class="shell">
     <header class="header">
-      <div>
-        <div class="eyebrow">Prototype 01 • Brainstorm Idea #5 (+ #1, #3, #4, #6)</div>
-        <h1>Player Pool × Patch "Universe" Riser Matrix</h1>
-        <p class="sub">Day-1 Patch 26.23 stat/breakpoint normalization crossed against Cloud9 Kia &amp; upcoming opponent GRID comfort pools.</p>
-      </div>
-      <div class="controls-bar">
-        <label class="mono" for="oppSelect">Opponent:</label>
-        <select id="oppSelect">
-          <option value="fly">FlyQuest (Bwipo / Inspired / Quad / Massu / Busio)</option>
-          <option value="tl">Team Liquid (Impact / Umti / APA / Yeon / CoreJJ)</option>
-        </select>
-        <span class="guardrail">✓ Support Only • Zero Draft Autopilot</span>
-      </div>
+      <h1>Patch 26.23 Risers</h1>
+      <select id="oppSelect" aria-label="Opponent">
+        <option value="fly">vs FlyQuest</option>
+        <option value="tl">vs Team Liquid</option>
+      </select>
     </header>
 
-    <div class="stepper">
-      <div class="step-tabs" id="stepTabs">
-        <button class="step-tab active" data-step="0">1. Universe Stat Diffs (26.23)</button>
-        <button class="step-tab" data-step="1">2. Roster Comfort × Riser Matrix</button>
-        <button class="step-tab" data-step="2">3. LCK → LCS Adoption Lag</button>
-        <button class="step-tab" data-step="3">4. Monday Scrim Brief (<span id="pinCount">3</span>)</button>
-      </div>
-      <div class="controls-bar">
-        <button id="prevBtn">← Prev View</button>
-        <button class="primary" id="nextBtn">Next View →</button>
-      </div>
+    <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Patch riser views" id="tablist">
+      <button type="button" role="tab" id="tab-0" aria-selected="true" focusgroupstart tabindex="0" data-step="0">Risers</button>
+      <button type="button" role="tab" id="tab-1" aria-selected="false" tabindex="-1" data-step="1">Matchup Edge</button>
+      <button type="button" role="tab" id="tab-2" aria-selected="false" tabindex="-1" data-step="2">LCK Lead</button>
+      <button type="button" role="tab" id="tab-3" aria-selected="false" tabindex="-1" data-step="3">Scrim List (<span id="pinCount">3</span>)</button>
     </div>
 
     <div class="workspace">
-      <main class="card">
-        <!-- VIEW 0 -->
-        <section id="view-0">
-          <div class="card-title">
-            <div>
-              <h2>Patch 26.22 → 26.23 Normalized "Universe" Power Shifts</h2>
-              <p class="sub">Click any champion row to inspect exact waveclear, Role-Quest, and Baron DPS math in the right inspector.</p>
+      <main>
+        <section role="tabpanel" id="panel-0" aria-labelledby="tab-0">
+          <div class="panel-box">
+            <div class="filter-row" id="rolePills" role="group" aria-label="Filter by role">
+              <button type="button" class="pill" aria-pressed="true" data-role="ALL">All</button>
+              <button type="button" class="pill" aria-pressed="false" data-role="TOP">Top</button>
+              <button type="button" class="pill" aria-pressed="false" data-role="JGL">Jgl</button>
+              <button type="button" class="pill" aria-pressed="false" data-role="MID">Mid</button>
+              <button type="button" class="pill" aria-pressed="false" data-role="BOT">Bot</button>
+              <button type="button" class="pill" aria-pressed="false" data-role="SUP">Sup</button>
             </div>
-            <div class="pill-row" id="rolePills">
-              <span class="pill active" data-role="ALL">All Roles</span>
-              <span class="pill" data-role="TOP">Top</span>
-              <span class="pill" data-role="JGL">Jungle</span>
-              <span class="pill" data-role="MID">Mid</span>
-              <span class="pill" data-role="BOT">Bot</span>
-              <span class="pill" data-role="SUP">Support</span>
+            <div tabindex="0" role="region" aria-labelledby="riser-cap" class="table-wrapper">
+              <table class="riser-table">
+                <caption id="riser-cap">Patch 26.23 power shifts</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Champion</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Shift</th>
+                    <th scope="col">Key Buff</th>
+                    <th scope="col">Scrim</th>
+                  </tr>
+                </thead>
+                <tbody id="universeTableBody"></tbody>
+              </table>
             </div>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Champion</th>
-                <th>Role</th>
-                <th>Direct + Systemic Lever</th>
-                <th>Universe z-Delta</th>
-                <th>26.x Role Quest Fit</th>
-                <th>Scrim Queue</th>
-              </tr>
-            </thead>
-            <tbody id="universeTableBody"></tbody>
-          </table>
         </section>
 
-        <!-- VIEW 1 -->
-        <section id="view-1" class="hidden">
-          <div class="card-title">
-            <div>
-              <h2>Player Comfort × Patch Riser Intersection</h2>
-              <p class="sub">Filters noise out of patch notes: surfaces only risers intersecting C9 Kia sleepers or <span id="oppNameInline">FlyQuest</span> signature comfort.</p>
+        <section role="tabpanel" id="panel-1" aria-labelledby="tab-1" hidden="until-found">
+          <div class="panel-box">
+            <div class="filter-row" id="signalPills" role="group" aria-label="Filter by signal">
+              <button type="button" class="pill" aria-pressed="true" data-sig="ALL">All</button>
+              <button type="button" class="pill" aria-pressed="false" data-sig="THREAT">Opponent Threat</button>
+              <button type="button" class="pill" aria-pressed="false" data-sig="SLEEPER">C9 Edge</button>
             </div>
-            <div class="pill-row" id="signalPills">
-              <span class="pill active" data-sig="ALL">All Signals</span>
-              <span class="pill" data-sig="THREAT">Opponent Threat Activated</span>
-              <span class="pill" data-sig="SLEEPER">C9 Kia Sleeper Unlock</span>
-            </div>
+            <div class="matrix-grid" id="comfortMatrixGrid"></div>
           </div>
-          <div class="matrix-grid" id="comfortMatrixGrid"></div>
         </section>
 
-        <!-- VIEW 2 -->
-        <section id="view-2" class="hidden">
-          <div class="card-title">
-            <div>
-              <h2>Cross-Region Propagation Radar (LCK Split 3 → LCS)</h2>
-              <p class="sub">Derived from 745 GRID series: identifies universe risers surging in Korea before Western teams adjust.</p>
+        <section role="tabpanel" id="panel-2" aria-labelledby="tab-2" hidden="until-found">
+          <div class="panel-box">
+            <div tabindex="0" role="region" aria-labelledby="lck-cap" class="table-wrapper">
+              <table class="lck-table">
+                <caption id="lck-cap">LCK to LCS adoption gap</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Champion</th>
+                    <th scope="col">LCK</th>
+                    <th scope="col">LCS</th>
+                    <th scope="col">Gap</th>
+                  </tr>
+                </thead>
+                <tbody id="lckLagBody"></tbody>
+              </table>
             </div>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Champion</th>
-                <th>Universe Delta</th>
-                <th>LCK Presence</th>
-                <th>LCS Presence</th>
-                <th>Adoption Gap</th>
-                <th>C9 Comfort Holder</th>
-              </tr>
-            </thead>
-            <tbody id="lckLagBody"></tbody>
-          </table>
         </section>
 
-        <!-- VIEW 3 -->
-        <section id="view-3" class="hidden">
-          <div class="card-title">
-            <div>
-              <h2>Monday Scrim Experiment Brief (Coach-Curated)</h2>
-              <p class="sub">Actionable scrim hypotheses pinned by analysts—respects scrim feedback rather than dictating stage picks.</p>
-            </div>
-          </div>
-          <div id="scrimBriefList"></div>
+        <section role="tabpanel" id="panel-3" aria-labelledby="tab-3" hidden="until-found">
+          <div class="panel-box" id="scrimBriefList"></div>
         </section>
       </main>
 
-      <!-- INSPECTOR -->
-      <aside class="card inspector" id="inspectorCard"></aside>
+      <aside class="panel-box inspector" id="inspectorCard" aria-live="polite"></aside>
     </div>
   </div>
 
@@ -261,101 +452,87 @@
     const CHAMPIONS = [
       {
         id: 'azir', name: 'Azir', role: 'MID', zDelta: '+1.84σ',
-        lever: 'W AP Ratio 55%→60% + Tankier 20:00 Baron DPS premium',
-        questFit: 'High (Mid T3 Boots + 2-item Nashor/Liandry burn)',
-        breakpoint: 'Lv9 W+Q clears ranged casters 1.4s faster; +14.2% sustained DPS on 20:00 Baron.',
-        lckPres: '74%', lcsPres: '28%', gap: '+46% LCK Lead',
+        lever: 'W AP ratio up + higher 20:00 Baron DPS',
+        breakpoint: 'Lv9 W+Q clears casters 1.4s faster; +14.2% Baron DPS at 20:00.',
+        lckPres: '74%', lcsPres: '28%', gap: '+46%',
         c9: { player: 'Loki', games: 14, wr: '71%', gd15: '+480g' },
         opp: {
           fly: { player: 'Quad', games: 19, wr: '68%', gd15: '+390g', signal: 'THREAT' },
           tl: { player: 'APA', games: 4, wr: '25%', gd15: '-310g', signal: 'SLEEPER' }
         },
-        evidence: 'GRID meta/rosters.csv: 41 LCK G1–G3 locks; C9 Loki +480 GD@15 across 14 stage games.',
-        scrimNote: 'Test B2/B3 Azir blind for Loki vs dive comps; verify Game-1 ban necessity vs Quad.'
+        scrimNote: 'Test B2/B3 Azir blind for Loki; check G1 ban priority vs Quad.'
       },
       {
         id: 'galio', name: 'Galio', role: 'MID', zDelta: '+1.62σ',
-        lever: 'Passive CD refund + Hollow Radiance waveclear cost -100g',
-        questFit: 'Elite (Empowered Recall + R global flank tempo)',
-        breakpoint: 'Hits 1-wave Q+Passive clear at 1st base (850g) without needing Blasting Wand.',
-        lckPres: '68%', lcsPres: '31%', gap: '+37% LCK Lead',
+        lever: 'Passive CD refund + Hollow Radiance -100g',
+        breakpoint: '1-wave Q+Passive clear on first base (850g).',
+        lckPres: '68%', lcsPres: '31%', gap: '+37%',
         c9: { player: 'Loki', games: 8, wr: '63%', gd15: '+190g' },
         opp: {
           fly: { player: 'Quad', games: 12, wr: '75%', gd15: '+260g', signal: 'THREAT' },
           tl: { player: 'APA', games: 9, wr: '56%', gd15: '+110g', signal: 'THREAT' }
         },
-        evidence: 'GRID series_2691042 & 2691188: FlyQuest pairs Vi + Galio in 78% of Red R1/R2 answers.',
-        scrimNote: 'Run Block-1 scrim testing Vi + Galio denial vs FlyQuest Red-side R1/R2.'
+        scrimNote: 'Test Vi + Galio denial on Red R1/R2.'
       },
       {
         id: 'gnar', name: 'Gnar', role: 'TOP', zDelta: '+1.49σ',
-        lever: '+3 Base AD + Q cooldown -1.5s at rank 1–3',
-        questFit: 'Very High (Top Lv20 Role Quest stat multiplier in Mega)',
-        breakpoint: 'Lv18→Lv20 Top Quest grants +610 effective Mega HP & +19 Armor in Baron frontlines.',
-        lckPres: '61%', lcsPres: '24%', gap: '+37% LCK Lead',
+        lever: '+3 base AD + early Q CD -1.5s',
+        breakpoint: 'Lv20 Top Quest adds +610 Mega HP and +19 Armor for Baron fights.',
+        lckPres: '61%', lcsPres: '24%', gap: '+37%',
         c9: { player: 'Thanatos', games: 16, wr: '69%', gd15: '+520g' },
         opp: {
           fly: { player: 'Bwipo', games: 11, wr: '64%', gd15: '+210g', signal: 'SLEEPER' },
           tl: { player: 'Impact', games: 22, wr: '68%', gd15: '+290g', signal: 'THREAT' }
         },
-        evidence: 'CommunityDragon 26.23 bin diff + Thanatos 16-game GRID split sample (+520 GD@15).',
-        scrimNote: 'Prioritize Thanatos Gnar into blind tanks; high Game-2/3 Fearless stabilizer.'
+        scrimNote: 'Prioritize Thanatos Gnar into blind tanks; strong G2/G3 stabilizer.'
       },
       {
         id: 'ksante', name: "K'Sante", role: 'TOP', zDelta: '+1.35σ',
-        lever: 'E shield base buff + Resist-scaling W monster cap raised',
-        questFit: 'Elite (Lv20 bonus resists feed All-Out AD conversion)',
+        lever: 'E shield buff + higher W monster cap',
         breakpoint: '+9.5% faster Grub/Scuttle skirmish TTK after Chain Vest + Negatron.',
-        lckPres: '81%', lcsPres: '49%', gap: '+32% LCK Lead',
+        lckPres: '81%', lcsPres: '49%', gap: '+32%',
         c9: { player: 'Thanatos', games: 21, wr: '71%', gd15: '+340g' },
         opp: {
           fly: { player: 'Bwipo', games: 7, wr: '43%', gd15: '-180g', signal: 'SLEEPER' },
           tl: { player: 'Impact', games: 18, wr: '67%', gd15: '+195g', signal: 'THREAT' }
         },
-        evidence: 'GRID LCS Split 2–3: Bwipo avoids K’Sante in Phase 1 (0 B1/R1 picks in last 14 series).',
-        scrimNote: 'C9 asymmetric edge vs FlyQuest: Thanatos high comfort while Bwipo prefers carry counters.'
+        scrimNote: 'Asymmetric edge vs FlyQuest: high Thanatos comfort while Bwipo avoids it P1.'
       },
       {
         id: 'sejuani', name: 'Sejuani', role: 'JGL', zDelta: '+1.28σ',
-        lever: 'Jungle camp HP nerf (-4%) speeds 1st clear by 4.5s',
-        questFit: 'High (Enables melee Top/Mid prio around 3:15 river)',
-        breakpoint: 'Reaches Scuttle at 3:14 leashless with 1 Smite charge banked for river contest.',
-        lckPres: '54%', lcsPres: '19%', gap: '+35% LCK Lead',
+        lever: 'Camp HP -4% speeds first clear by 4.5s',
+        breakpoint: '3:14 leashless Scuttle arrival with 1 Smite banked.',
+        lckPres: '54%', lcsPres: '19%', gap: '+35%',
         c9: { player: 'Blaber', games: 13, wr: '69%', gd15: '+275g' },
         opp: {
           fly: { player: 'Inspired', games: 17, wr: '76%', gd15: '+410g', signal: 'THREAT' },
           tl: { player: 'Umti', games: 15, wr: '60%', gd15: '+140g', signal: 'THREAT' }
         },
-        evidence: 'GRID events player-completed-slayVoidGrub: Inspired 76% WR when paired with melee solo.',
-        scrimNote: 'Track Sejuani + Yone/Gnar pair in Game 3+ once Vi/Skarner are Fearless-locked.'
+        scrimNote: 'Track Sejuani + melee solo pairings in G3+ once Vi/Skarner are locked.'
       },
       {
         id: 'jinx', name: 'Jinx', role: 'BOT', zDelta: '+1.41σ',
-        lever: 'Yun Tal + IE crit curve -150g + 26.x Bot 7th-Item Quest ceiling',
-        questFit: 'Extreme (Bot Role Quest extra item slot hyper-scales rockets)',
-        breakpoint: 'Hits 2-item + T2 boots spike ~55s earlier (avg 17:40 vs 18:35 on 26.21).',
-        lckPres: '58%', lcsPres: '33%', gap: '+25% LCK Lead',
+        lever: 'Crit core -150g + 7th-item Bot ceiling',
+        breakpoint: '2-item + T2 boots spike arrives ~55s earlier (17:40 avg).',
+        lckPres: '58%', lcsPres: '33%', gap: '+25%',
         c9: { player: 'Zven', games: 15, wr: '73%', gd15: '+310g' },
         opp: {
           fly: { player: 'Massu', games: 11, wr: '64%', gd15: '+165g', signal: 'SLEEPER' },
           tl: { player: 'Yeon', games: 14, wr: '71%', gd15: '+380g', signal: 'THREAT' }
         },
-        evidence: 'GRID item events: Zven averages 9.8 CS/m and 73% WR when paired with Lulu/Braum.',
-        scrimNote: 'Test Jinx + Braum in Game 2/3 after Kalista/Varus leave the Fearless pool.'
+        scrimNote: 'Test Jinx + Braum in G2/G3 after Kalista/Varus leave the pool.'
       },
       {
         id: 'rell', name: 'Rell', role: 'SUP', zDelta: '+1.19σ',
-        lever: 'W mount MS +5 & Faelight river choke engage angles',
-        questFit: 'High (Controls Season 2026 Faelight rings pre-Dragon)',
-        breakpoint: 'Flash+W->R combo cooldown syncs cleanly with 5:00 & 10:20 objective timers.',
-        lckPres: '66%', lcsPres: '44%', gap: '+22% LCK Lead',
+        lever: 'W mount MS +5 into river chokes',
+        breakpoint: 'Flash+W→R syncs with 5:00 and 10:20 objective timers.',
+        lckPres: '66%', lcsPres: '44%', gap: '+22%',
         c9: { player: 'Vulcan', games: 18, wr: '67%', gd15: '+220g' },
         opp: {
           fly: { player: 'Busio', games: 16, wr: '69%', gd15: '+240g', signal: 'THREAT' },
           tl: { player: 'CoreJJ', games: 20, wr: '70%', gd15: '+260g', signal: 'THREAT' }
         },
-        evidence: 'GRID coordinates: Vulcan + Busio contest 82% of river Faelights within 45s of Drake.',
-        scrimNote: 'Keep Rell as high-value Game 1/2 handshake trade when enemy locks immobile carries.'
+        scrimNote: 'High-value G1/G2 engage trade into immobile carries.'
       }
     ];
 
@@ -368,18 +545,33 @@
       pinned: new Set(['azir', 'galio', 'ksante'])
     };
 
-    function setStep(idx) {
-      state.step = Math.max(0, Math.min(3, idx));
-      document.querySelectorAll('.step-tab').forEach((btn, i) => {
-        btn.classList.toggle('active', i === state.step);
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    const panels = [...document.querySelectorAll('[role="tabpanel"]')];
+
+    function setStep(idx, focusTab = false) {
+      state.step = Math.max(0, Math.min(tabs.length - 1, idx));
+      tabs.forEach((tab, i) => {
+        const active = i === state.step;
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+        tab.toggleAttribute('focusgroupstart', active);
       });
-      for (let i = 0; i < 4; i++) {
-        document.getElementById('view-' + i).classList.toggle('hidden', i !== state.step);
-      }
-      document.getElementById('prevBtn').disabled = state.step === 0;
-      document.getElementById('nextBtn').textContent = state.step === 3 ? 'Back to Step 1 ↺' : 'Next View →';
+      panels.forEach((panel, i) => {
+        if (i === state.step) {
+          panel.removeAttribute('hidden');
+        } else {
+          panel.hidden = 'until-found';
+        }
+      });
+      const activeTab = tabs[state.step];
+      activeTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      if (focusTab) activeTab.focus();
       renderAll();
     }
+
+    panels.forEach((panel, i) => {
+      panel.addEventListener('beforematch', () => setStep(i));
+    });
 
     function togglePin(id, ev) {
       if (ev) ev.stopPropagation();
@@ -395,66 +587,45 @@
       tbody.innerHTML = rows.map(c => {
         const pinned = state.pinned.has(c.id);
         return `
-          <tr class="selectable ${c.id === state.selectedId ? 'selected-row' : ''}" data-id="${c.id}">
-            <td><strong>${c.name}</strong></td>
-            <td><span class="mono">${c.role}</span></td>
-            <td>${c.lever}</td>
+          <tr class="${c.id === state.selectedId ? 'selected' : ''}" data-id="${c.id}">
+            <th scope="row">${c.name}</th>
+            <td class="mono muted">${c.role}</td>
             <td><span class="tag up">${c.zDelta}</span></td>
-            <td style="font-size:12px;color:#cbd5e1">${c.questFit}</td>
-            <td>
-              <button class="${pinned ? 'primary' : ''}" data-pin="${c.id}">
-                ${pinned ? '✓ Pinned' : '+ Pin Scrim'}
-              </button>
-            </td>
+            <td>${c.lever}</td>
+            <td><button type="button" class="${pinned ? 'primary' : ''}" data-pin="${c.id}">${pinned ? 'Pinned' : '+ Pin'}</button></td>
           </tr>
         `;
       }).join('');
     }
 
     function renderComfortMatrix() {
-      const oppLabel = state.opp === 'fly' ? 'FlyQuest' : 'Team Liquid';
-      document.getElementById('oppNameInline').textContent = oppLabel;
+      const oppLabel = state.opp === 'fly' ? 'FLY' : 'TL';
       const grid = document.getElementById('comfortMatrixGrid');
-      const items = CHAMPIONS.filter(c => {
-        const sig = c.opp[state.opp].signal;
-        return state.sigFilter === 'ALL' || sig === state.sigFilter;
-      });
+      const items = CHAMPIONS.filter(c => state.sigFilter === 'ALL' || c.opp[state.opp].signal === state.sigFilter);
       grid.innerHTML = items.map(c => {
         const o = c.opp[state.opp];
         const isThreat = o.signal === 'THREAT';
         return `
-          <div class="m-tile ${c.id === state.selectedId ? 'active' : ''}" data-id="${c.id}">
-            <div class="m-head">
-              <span class="m-champ">${c.name} <span class="mono" style="color:var(--muted)">(${c.role})</span></span>
-              <span class="tag up">${c.zDelta}</span>
+          <div class="tile ${c.id === state.selectedId ? 'selected' : ''}" data-id="${c.id}">
+            <div class="tile-head">
+              <strong>${c.name} <span class="mono muted">${c.role}</span></strong>
+              <span class="tag ${isThreat ? 'threat' : 'edge'}">${isThreat ? 'Threat' : 'C9 Edge'}</span>
             </div>
-            <div style="margin-bottom:8px">
-              <span class="tag ${isThreat ? 'threat' : 'c9'}">
-                ${isThreat ? '⚠ Opponent Comfort Activated' : '★ C9 Asymmetric Sleeper'}
-              </span>
-            </div>
-            <div style="font-size:12px;margin-bottom:4px">
-              <strong>C9 ${c.c9.player}:</strong> ${c.c9.games}g • ${c.c9.wr} WR • <span class="mono">${c.c9.gd15}</span>
-            </div>
-            <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(100, c.c9.games * 4.5)}%"></div></div>
-            <div style="font-size:12px;color:#cbd5e1">
-              <strong>${oppLabel} ${o.player}:</strong> ${o.games}g • ${o.wr} WR • <span class="mono">${o.gd15}</span>
-            </div>
+            <div style="font-size:0.8rem"><strong>C9 ${c.c9.player}</strong> · ${c.c9.wr} · <span class="mono">${c.c9.gd15}</span></div>
+            <div class="bar"><div style="width:${Math.min(100, c.c9.games * 4.5)}%"></div></div>
+            <div class="muted" style="font-size:0.8rem"><strong>${oppLabel} ${o.player}</strong> · ${o.wr} · <span class="mono">${o.gd15}</span></div>
           </div>
         `;
       }).join('');
     }
 
     function renderLckLag() {
-      const tbody = document.getElementById('lckLagBody');
-      tbody.innerHTML = CHAMPIONS.map(c => `
-        <tr class="selectable ${c.id === state.selectedId ? 'selected-row' : ''}" data-id="${c.id}">
-          <td><strong>${c.name}</strong> <span class="mono" style="color:var(--muted)">${c.role}</span></td>
-          <td><span class="tag up">${c.zDelta}</span></td>
+      document.getElementById('lckLagBody').innerHTML = CHAMPIONS.map(c => `
+        <tr class="${c.id === state.selectedId ? 'selected' : ''}" data-id="${c.id}">
+          <th scope="row">${c.name} <span class="mono muted">${c.role}</span></th>
           <td class="mono">${c.lckPres}</td>
           <td class="mono">${c.lcsPres}</td>
           <td><span class="tag warn">${c.gap}</span></td>
-          <td>C9 <strong>${c.c9.player}</strong> (${c.c9.games}g, ${c.c9.wr})</td>
         </tr>
       `).join('');
     }
@@ -463,47 +634,42 @@
       const wrap = document.getElementById('scrimBriefList');
       const list = CHAMPIONS.filter(c => state.pinned.has(c.id));
       if (!list.length) {
-        wrap.innerHTML = `<p class="sub">No champions pinned yet. Return to View 1 and click "+ Pin Scrim" on any riser.</p>`;
+        wrap.innerHTML = `<p class="muted">No champions pinned.</p>`;
         return;
       }
-      wrap.innerHTML = list.map((c, idx) => {
-        const o = c.opp[state.opp];
-        return `
-          <div class="scrim-card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <strong>Scrim Hypothesis #${idx + 1}: ${c.name} (${c.role}) — Universe ${c.zDelta}</strong>
-              <button data-pin="${c.id}">Remove</button>
-            </div>
-            <p style="font-size:13px;margin-bottom:6px">${c.scrimNote}</p>
-            <div class="mono" style="color:var(--muted)">
-              C9 ${c.c9.player} (${c.c9.games}g, ${c.c9.gd15}) vs ${o.player} (${o.games}g, ${o.gd15}) • ${c.gap}
-            </div>
+      wrap.innerHTML = list.map(c => `
+        <div class="scrim-item">
+          <div>
+            <strong>${c.name}</strong> <span class="tag up" style="margin-inline-start:6px">${c.zDelta}</span>
+            <p class="muted" style="margin-block-start:4px">${c.scrimNote}</p>
           </div>
-        `;
-      }).join('');
+          <button type="button" data-pin="${c.id}">Remove</button>
+        </div>
+      `).join('');
     }
 
     function renderInspector() {
       const c = CHAMPIONS.find(x => x.id === state.selectedId) || CHAMPIONS[0];
       const o = c.opp[state.opp];
-      const oppTeam = state.opp === 'fly' ? 'FlyQuest' : 'Team Liquid';
+      const oppTeam = state.opp === 'fly' ? 'FLY' : 'TL';
       const pinned = state.pinned.has(c.id);
+      const isThreat = o.signal === 'THREAT';
       document.getElementById('inspectorCard').innerHTML = `
-        <div class="eyebrow">Breakpoint &amp; GRID Evidence Inspector</div>
-        <h3>${c.name} <span class="mono" style="color:var(--accent)">${c.zDelta}</span></h3>
-        <p class="sub" style="margin-bottom:10px">${c.lever}</p>
-        <div class="math-box">
-          <strong>Patch 26.23 Breakpoint Math:</strong><br/>
-          ${c.breakpoint}
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-block-end:6px">
+          <h2>${c.name}</h2>
+          <span class="tag ${isThreat ? 'threat' : 'edge'}">${isThreat ? 'Threat' : 'C9 Edge'}</span>
         </div>
-        <div class="kv"><span>C9 Kia Comfort (${c.c9.player})</span><span class="mono">${c.c9.games}g | ${c.c9.wr} | ${c.c9.gd15}</span></div>
-        <div class="kv"><span>${oppTeam} (${o.player})</span><span class="mono">${o.games}g | ${o.wr} | ${o.gd15}</span></div>
-        <div class="kv"><span>LCK vs LCS Presence</span><span class="mono">${c.lckPres} vs ${c.lcsPres}</span></div>
-        <div class="math-box" style="color:#94a3b8">
-          <strong>GRID Verification:</strong><br/>${c.evidence}
-        </div>
-        <button class="primary" style="width:100%" data-pin="${c.id}">
-          ${pinned ? '✓ In Monday Scrim Brief (Click to Unpin)' : '+ Add to Monday Scrim Brief'}
+        <div class="kv"><span>Power Shift</span><span class="tag up">${c.zDelta}</span></div>
+        <div class="kv"><span>C9 ${c.c9.player}</span><span class="mono">${c.c9.games}g · ${c.c9.wr} · ${c.c9.gd15}</span></div>
+        <div class="kv"><span>${oppTeam} ${o.player}</span><span class="mono">${o.games}g · ${o.wr} · ${o.gd15}</span></div>
+        <div class="kv"><span>LCK / LCS</span><span class="mono">${c.lckPres} / ${c.lcsPres}</span></div>
+        <div class="callout">${c.scrimNote}</div>
+        <details>
+          <summary>Breakpoint details</summary>
+          <p>${c.breakpoint}</p>
+        </details>
+        <button type="button" class="primary" style="width:100%" data-pin="${c.id}">
+          ${pinned ? 'Pinned to Scrim List' : '+ Pin to Scrim List'}
         </button>
       `;
     }
@@ -516,12 +682,16 @@
       renderInspector();
     }
 
-    document.getElementById('stepTabs').addEventListener('click', e => {
-      const btn = e.target.closest('.step-tab');
+    document.getElementById('tablist').addEventListener('click', e => {
+      const btn = e.target.closest('[role="tab"]');
       if (btn) setStep(Number(btn.dataset.step));
     });
-    document.getElementById('prevBtn').addEventListener('click', () => setStep(state.step - 1));
-    document.getElementById('nextBtn').addEventListener('click', () => setStep(state.step === 3 ? 0 : state.step + 1));
+    document.getElementById('tablist').addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); setStep((state.step + 1) % tabs.length, true); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); setStep((state.step - 1 + tabs.length) % tabs.length, true); }
+      else if (e.key === 'Home') { e.preventDefault(); setStep(0, true); }
+      else if (e.key === 'End') { e.preventDefault(); setStep(tabs.length - 1, true); }
+    });
     document.getElementById('oppSelect').addEventListener('change', e => {
       state.opp = e.target.value;
       renderAll();
@@ -530,34 +700,35 @@
       const p = e.target.closest('.pill');
       if (!p) return;
       state.roleFilter = p.dataset.role;
-      document.querySelectorAll('#rolePills .pill').forEach(el => el.classList.toggle('active', el === p));
+      document.querySelectorAll('#rolePills .pill').forEach(el => el.setAttribute('aria-pressed', String(el === p)));
       renderAll();
     });
     document.getElementById('signalPills').addEventListener('click', e => {
       const p = e.target.closest('.pill');
       if (!p) return;
       state.sigFilter = p.dataset.sig;
-      document.querySelectorAll('#signalPills .pill').forEach(el => el.classList.toggle('active', el === p));
+      document.querySelectorAll('#signalPills .pill').forEach(el => el.setAttribute('aria-pressed', String(el === p)));
       renderAll();
     });
     document.body.addEventListener('click', e => {
       const pinBtn = e.target.closest('[data-pin]');
-      if (pinBtn) {
-        togglePin(pinBtn.dataset.pin, e);
-        return;
-      }
+      if (pinBtn) { togglePin(pinBtn.dataset.pin, e); return; }
       const row = e.target.closest('[data-id]');
-      if (row) {
-        state.selectedId = row.dataset.id;
-        renderAll();
-      }
-    });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'ArrowRight') setStep(Math.min(3, state.step + 1));
-      if (e.key === 'ArrowLeft') setStep(Math.max(0, state.step - 1));
+      if (row) { state.selectedId = row.dataset.id; renderAll(); }
     });
 
-    setStep(0);
+    if (!CSS.supports('container-type', 'scroll-state')) {
+      const bar = document.querySelector('.topnav');
+      let lastY = scrollY;
+      addEventListener('scroll', () => {
+        const y = Math.max(0, Math.min(scrollY, document.documentElement.scrollHeight - innerHeight));
+        if (y === lastY) return;
+        bar?.classList.toggle('is-hidden', y > lastY && y > bar.offsetHeight);
+        lastY = y;
+      }, { passive: true });
+    }
+
+    renderAll();
   </script>
 </body>
 </html>
