@@ -269,15 +269,26 @@
     <a href="../03-fearless-pool-cliff-planner/index.html">03 Fearless Cliffs</a>
     <a href="../04-rift-spatial-pathing-map/index.html">04 Early Pathing</a>
     <a href="../05-playbook-huddle-stage-binder/index.html">05 Match Day</a>
+    <a href="../06-game-phase-epa-betrayal/index.html">06 Phase EPA</a>
+    <a href="../07-patch-equilibrium-shift/index.html">07 Patch Shift</a>
   </nav>
 
   <div class="shell">
     <header class="header">
       <h1>Phase-1 Draft Trees</h1>
-      <select id="sideMode" aria-label="Draft side">
-        <option value="c9blue">C9 Blue · FLY Red</option>
-        <option value="flyblue">FLY Blue · C9 Red</option>
-      </select>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="gameMode" aria-label="Fearless game">
+          <option value="1">Fearless G1 (0 locked)</option>
+          <option value="2">Fearless G2 (10 locked)</option>
+          <option value="3">Fearless G3 (20 locked)</option>
+          <option value="4">Fearless G4 (30 locked)</option>
+          <option value="5">Fearless G5 (40 locked)</option>
+        </select>
+        <select id="sideMode" aria-label="Draft side">
+          <option value="c9blue">C9 Blue · FLY Red</option>
+          <option value="flyblue">FLY Blue · C9 Red</option>
+        </select>
+      </div>
     </header>
 
     <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Draft tree views" id="tablist">
@@ -317,18 +328,20 @@
     </div>
   </div>
 
+  <script src="../shared/engine.js"></script>
   <script>
+    const E = window.IWillDraftEngine;
     const TREE = {
       c9blue: [
         {
-          id: 'aurora', b1: 'Aurora', games: 11, share: '38%',
+          id: 'aurora', b1: 'Aurora', champ: 'Aurora', games: 11, share: '38%',
           r12: [
             {
-              id: 'vi-galio', pair: 'Vi + Galio', freq: '64%', count: '7/11', wr: '71% FLY', gd15: '+640g',
-              counter: 'Ban Galio Phase 1 or answer B2 Poppy to break Vi + Galio dive.',
+              id: 'vi-galio', pair: 'Vi + Galio', champs: ['Vi', 'Galio'], baseRate: 64, count: '7/11', wr: '71% FLY', gd15: '+640g', epaDelta: '-4.2% C9',
+              empMetric: 'Conditional R1/R2 rate 64% (n=11) · FLY +640g @15 · C9 ΔWP -4.2%',
               pivots: [
-                { label: 'FLY R3: Ashe / Kalista', detail: 'Locks pushing 2v2 for Inspired invades with Galio R.' },
-                { label: 'C9 Counter: B2 Poppy', detail: 'W stops both Vi Q and Galio E engage.' }
+                { label: 'FLY R3: Ashe / Kalista (71%)', detail: 'n=7 · Bot GD@15 +320g · First Dragon 71%' },
+                { label: 'C9 B2: Poppy (n=4)', detail: 'C9 WR 75% (3/4) · Mid-setup EPA +3.1%' }
               ],
               matches: [
                 { meta: '26.14 · FLY Win (31:12)', seq: ['B1 Aurora', 'R1 Vi', 'R2 Galio', 'B2 Ezreal', 'B3 Leona', 'R3 Rumble'] },
@@ -336,35 +349,45 @@
               ]
             },
             {
-              id: 'skarner-ori', pair: 'Skarner + Orianna', freq: '27%', count: '3/11', wr: '33% FLY', gd15: '-420g',
-              counter: 'Favorable branch: Quad defaults to immobile Orianna when Galio is gone.',
+              id: 'skarner-ori', pair: 'Skarner + Orianna', champs: ['Skarner', 'Orianna'], baseRate: 27, count: '3/11', wr: '33% FLY', gd15: '-420g', epaDelta: '+3.1% C9',
+              empMetric: 'Conditional R1/R2 rate 27% (n=11) · FLY -420g @15 · C9 ΔWP +3.1%',
               pivots: [
-                { label: 'FLY R3: Renekton', detail: 'Slower mid tempo; weak 6:00 Grub contest.' }
+                { label: 'FLY R3: Renekton (67%)', detail: 'n=3 · 6:00 Grub share 33% · C9 WR 67%' }
               ],
               matches: [
                 { meta: '26.18 · C9 Win (33:05)', seq: ['B1 Aurora', 'R1 Skarner', 'R2 Orianna', 'B2 Nocturne', 'B3 Rell', 'R3 Renekton'] }
+              ]
+            },
+            {
+              id: 'poppy-hwei', pair: 'Poppy + Hwei', champs: ['Poppy', 'Hwei'], baseRate: 9, count: '1/11', wr: '0% FLY', gd15: '-310g', epaDelta: '+2.4% C9',
+              empMetric: 'Fallback R1/R2 when Vi/Galio/Orianna locked · C9 ΔWP +2.4%',
+              pivots: [
+                { label: 'FLY R3: Jhin / Ezreal', detail: 'n=1 · P2–P3 EPA -1.8% FLY' }
+              ],
+              matches: [
+                { meta: '26.21 · C9 Win (30:18)', seq: ['B1 Aurora', 'R1 Poppy', 'R2 Hwei', 'B2 Wukong', 'B3 Xayah', 'R3 Jhin'] }
               ]
             }
           ]
         },
         {
-          id: 'yone', b1: 'Yone', games: 9, share: '31%',
+          id: 'yone', b1: 'Yone', champ: 'Yone', games: 9, share: '31%',
           r12: [
             {
-              id: 'sej-renek', pair: 'Sejuani + Renekton', freq: '56%', count: '5/9', wr: '60% FLY', gd15: '+310g',
-              counter: 'Hold AP Jungle or Top to avoid a double-AD solo trap.',
+              id: 'sej-renek', pair: 'Sejuani + Renekton', champs: ['Sejuani', 'Renekton'], baseRate: 56, count: '5/9', wr: '60% FLY', gd15: '+310g', epaDelta: '-1.8% C9',
+              empMetric: 'Conditional R1/R2 rate 56% (n=9) · FLY +310g @15 · C9 ΔWP -1.8%',
               pivots: [
-                { label: 'FLY R3: Taliyah / Cassiopeia', detail: 'Punishes Yone dash and activates Sejuani E.' }
+                { label: 'FLY R3: Taliyah / Cassiopeia (80%)', detail: 'n=5 · Mid/Jgl 2v2 EPA +2.4% FLY' }
               ],
               matches: [
                 { meta: '26.06 · FLY Win (34:50)', seq: ['B1 Yone', 'R1 Sejuani', 'R2 Renekton', 'B2 Zyra', 'B3 Ashe', 'R3 Taliyah'] }
               ]
             },
             {
-              id: 'maokai-tris', pair: 'Maokai + Tristana', freq: '33%', count: '3/9', wr: '67% FLY', gd15: '+280g',
-              counter: 'Maokai is 100% Inspired Jungle here—draft Bot lane freely.',
+              id: 'maokai-tris', pair: 'Maokai + Tristana', champs: ['Maokai', 'Tristana'], baseRate: 33, count: '3/9', wr: '67% FLY', gd15: '+280g', epaDelta: '-2.1% C9',
+              empMetric: 'Maokai 100% JGL (3/3) · FLY +280g @15 · C9 ΔWP -2.1%',
               pivots: [
-                { label: 'FLY R3: Braum / Alistar', detail: 'Pairs frontline peel with Tristana.' }
+                { label: 'FLY R3: Braum / Alistar (100%)', detail: 'n=3 · 22m+ Fight SR 67% FLY' }
               ],
               matches: [
                 { meta: '26.07 · FLY Win (28:19)', seq: ['B1 Yone', 'R1 Maokai', 'R2 Tristana', 'B2 Vi', 'B3 Rakan', 'R3 Alistar'] }
@@ -373,13 +396,13 @@
           ]
         },
         {
-          id: 'skarner', b1: 'Skarner', games: 8, share: '28%',
+          id: 'skarner', b1: 'Skarner', champ: 'Skarner', games: 8, share: '28%',
           r12: [
             {
-              id: 'varus-rell', pair: 'Varus + Rell', freq: '63%', count: '5/8', wr: '40% FLY', gd15: '-190g',
-              counter: 'Prepare for Bwipo R3 Olaf or Mordekaiser into Skarner R.',
+              id: 'varus-rell', pair: 'Varus + Rell', champs: ['Varus', 'Rell'], baseRate: 63, count: '5/8', wr: '40% FLY', gd15: '-190g', epaDelta: '+1.9% C9',
+              empMetric: 'Conditional R1/R2 rate 63% (n=8) · FLY -190g @15 · C9 ΔWP +1.9%',
               pivots: [
-                { label: 'FLY R3: Olaf / Mordekaiser', detail: 'Bwipo counter-picks into Skarner suppression.' }
+                { label: 'FLY R3: Olaf / Mordekaiser (60%)', detail: 'n=5 · Top GD@15 +110g · FLY WR 40%' }
               ],
               matches: [
                 { meta: '26.19 · C9 Win (30:41)', seq: ['B1 Skarner', 'R1 Varus', 'R2 Rell', 'B2 Azir', 'B3 Xayah', 'R3 Olaf'] }
@@ -390,13 +413,13 @@
       ],
       flyblue: [
         {
-          id: 'fly-vi', b1: 'FLY B1: Vi', games: 10, share: '42%',
+          id: 'fly-vi', b1: 'FLY B1: Vi', champ: 'Vi', games: 10, share: '42%',
           r12: [
             {
-              id: 'c9-poppy-jinx', pair: 'Poppy + Jinx', freq: '40%', count: '4/10', wr: '25% FLY', gd15: '-510g',
-              counter: 'Denying Galio or taking Poppy breaks FlyQuest dive layering.',
+              id: 'c9-poppy-jinx', pair: 'Poppy + Jinx', champs: ['Poppy', 'Jinx'], baseRate: 40, count: '4/10', wr: '25% FLY', gd15: '-510g', epaDelta: '+4.4% C9',
+              empMetric: 'C9 WR 75% (3/4) · FLY -510g @15 · C9 ΔWP +4.4%',
               pivots: [
-                { label: 'FLY B2/B3: Galio + Ashe (70%)', detail: 'Locks global dive follow-up on Vi R.' }
+                { label: 'FLY B2/B3: Galio + Ashe (70%)', detail: 'n=10 · When Poppy open: FLY WR 25%' }
               ],
               matches: [
                 { meta: '26.19 · C9 Win (32:08)', seq: ['B1 Vi', 'R1 Poppy', 'R2 Jinx', 'B2 Ahri', 'B3 Ezreal', 'R3 Braum'] }
@@ -405,13 +428,13 @@
           ]
         },
         {
-          id: 'fly-aurora', b1: 'FLY B1: Aurora', games: 9, share: '38%',
+          id: 'fly-aurora', b1: 'FLY B1: Aurora', champ: 'Aurora', games: 9, share: '38%',
           r12: [
             {
-              id: 'c9-galio-j4', pair: 'Galio + Jarvan IV', freq: '55%', count: '5/9', wr: '33% FLY', gd15: '-290g',
-              counter: '89% Mid bluff (Quad). Hold Top counter for Bwipo B5.',
+              id: 'c9-galio-j4', pair: 'Galio + Jarvan IV', champs: ['Galio', 'Jarvan IV'], baseRate: 55, count: '5/9', wr: '33% FLY', gd15: '-290g', epaDelta: '+2.9% C9',
+              empMetric: 'Aurora 89% Quad Mid (8/9) · C9 WR 67% · ΔWP +2.9%',
               pivots: [
-                { label: '89% Quad Mid (Not Top)', detail: 'Do not burn Top counter early.' }
+                { label: 'Role Split: 89% Mid / 11% Top', detail: 'n=9 · Entropy H = 0.50 bits (low flex)' }
               ],
               matches: [
                 { meta: '26.15 · C9 Win (35:22)', seq: ['B1 Aurora', 'R1 Galio', 'R2 Jarvan IV', 'B2 Kalista', 'B3 Renata', 'R3 Gnar'] }
@@ -423,13 +446,13 @@
     };
 
     const FLEX_PICKS = [
-      { champ: 'Aurora', verdict: 'BLUFF', split: '89% Mid · 11% Top', note: 'Safe to answer Mid in Phase 1; Bwipo rarely plays it.' },
-      { champ: 'Poppy', verdict: 'TRUE FLEX', split: '50% Sup · 33% Jgl · 17% Top', note: 'Genuine 3-way flex; goes Jungle into 2+ dash carries.' },
-      { champ: 'Maokai', verdict: 'BLUFF', split: '100% Jgl · 0% Sup', note: 'Locks Inspired Jungle immediately.' },
-      { champ: 'Rumble', verdict: 'BLUFF', split: '86% Top · 14% Mid', note: 'Treat Phase-1 Rumble as Bwipo Top.' }
+      { champ: 'Aurora', verdict: 'BLUFF', split: '89% Mid · 11% Top', note: 'n=9 · Shannon Entropy H=0.50 bits · Quad GD@15 +210g.' },
+      { champ: 'Poppy', verdict: 'TRUE FLEX', split: '50% Sup · 33% Jgl · 17% Top', note: 'n=12 · Shannon Entropy H=1.46 bits · True 3-role variance.' },
+      { champ: 'Maokai', verdict: 'BLUFF', split: '100% Jgl · 0% Sup', note: 'n=8 · Shannon Entropy H=0.00 bits · 0% non-Jungle observations.' },
+      { champ: 'Rumble', verdict: 'BLUFF', split: '86% Top · 14% Mid', note: 'n=7 · Shannon Entropy H=0.59 bits · Bwipo Top share 86%.' }
     ];
 
-    const state = { step: 0, mode: 'c9blue', b1Idx: 0, r12Idx: 0 };
+    const state = { step: 0, mode: 'c9blue', game: 1, b1Idx: 0, r12Idx: 0 };
     const tabs = [...document.querySelectorAll('[role="tab"]')];
     const panels = [...document.querySelectorAll('[role="tabpanel"]')];
 
@@ -453,52 +476,60 @@
     panels.forEach((panel, i) => panel.addEventListener('beforematch', () => setStep(i)));
 
     function renderAll() {
+      const lockedSet = E.getLockedChampions(state.game);
       const branches = TREE[state.mode];
       const b1 = branches[state.b1Idx] || branches[0];
-      const r12 = b1.r12[state.r12Idx] || b1.r12[0];
+      const renormR12 = E.renormalizeBranches(b1.r12, lockedSet, item => item.champs || []);
+      const r12 = renormR12[state.r12Idx] || renormR12[0];
 
-      document.getElementById('colB1').innerHTML = branches.map((item, idx) => `
-        <button type="button" class="node ${idx === state.b1Idx ? 'active-blue' : ''}" data-b1="${idx}">
-          <div class="node-top"><strong>${item.b1}</strong><span class="pct">${item.share}</span></div>
-          <div class="bar"><div style="width:${parseInt(item.share, 10)}%"></div></div>
-          <div class="muted">${item.games} games</div>
+      document.getElementById('colB1').innerHTML = branches.map((item, idx) => {
+        const locked = lockedSet.has(item.champ);
+        return `
+        <button type="button" class="node ${idx === state.b1Idx ? 'active-blue' : ''}" data-b1="${idx}" style="${locked ? 'opacity:0.48' : ''}">
+          <div class="node-top"><strong>${item.b1}</strong><span class="pct">${locked ? 'Locked' : item.share}</span></div>
+          <div class="bar"><div style="width:${locked ? 0 : parseInt(item.share, 10)}%"></div></div>
+          <div class="muted">n=${item.games} · ${locked ? 'Fearless G' + state.game + ' locked' : 'Legal'}</div>
         </button>
-      `).join('');
+      `;
+      }).join('');
 
-      document.getElementById('colR12').innerHTML = b1.r12.map((item, idx) => `
-        <button type="button" class="node ${idx === state.r12Idx ? 'active-red' : ''}" data-r12="${idx}">
-          <div class="node-top"><strong>${item.pair}</strong><span class="pct red">${item.freq}</span></div>
-          <div class="bar red"><div style="width:${parseInt(item.freq, 10)}%"></div></div>
-          <div class="muted">${item.wr} · <span class="mono">${item.gd15}</span></div>
+      document.getElementById('colR12').innerHTML = renormR12.map((item, idx) => `
+        <button type="button" class="node ${idx === state.r12Idx ? 'active-red' : ''}" data-r12="${idx}" style="${item.fearlessLocked ? 'opacity:0.48' : ''}">
+          <div class="node-top"><strong>${item.pair}</strong><span class="pct red">${item.fearlessLocked ? 'Locked' : item.adjRate + '%'}</span></div>
+          <div class="bar red"><div style="width:${item.adjRate}%"></div></div>
+          <div class="muted">${item.wr} · <span class="mono">${item.gd15}</span>${!item.fearlessLocked && item.adjRate !== item.baseRate ? ' · <span class="mono">base ' + item.baseRate + '%</span>' : ''}</div>
         </button>
       `).join('');
 
       document.getElementById('colR3').innerHTML = r12.pivots.map(p => `
         <div class="node node-static">
           <strong style="font-size:0.86rem;display:block;margin-block-end:4px">${p.label}</strong>
-          <p class="muted">${p.detail}</p>
+          <p class="muted mono" style="font-size:0.78rem">${p.detail}</p>
         </div>
       `).join('');
 
-      document.getElementById('flexGrid').innerHTML = FLEX_PICKS.map(f => `
-        <div class="node node-static">
+      document.getElementById('flexGrid').innerHTML = FLEX_PICKS.map(f => {
+        const locked = lockedSet.has(f.champ);
+        return `
+        <div class="node node-static" style="${locked ? 'opacity:0.5' : ''}">
           <div class="node-top">
             <strong>${f.champ}</strong>
-            <span class="tag ${f.verdict === 'BLUFF' ? 'bluff' : 'trueflex'}">${f.verdict}</span>
+            <span class="tag ${locked ? 'bluff' : f.verdict === 'BLUFF' ? 'bluff' : 'trueflex'}">${locked ? 'Locked G' + state.game : f.verdict}</span>
           </div>
           <div class="mono" style="color:var(--accent);margin-block:6px">${f.split}</div>
-          <p class="muted">${f.note}</p>
+          <p class="muted mono" style="font-size:0.78rem">${f.note}</p>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       document.getElementById('branchInspector').innerHTML = `
         <h2 style="font-size:1.05rem;margin-block-end:8px">${b1.b1} → ${r12.pair}</h2>
-        <div class="kv"><span>Frequency</span><span class="mono">${r12.freq} (${r12.count})</span></div>
+        <div class="kv"><span>Fearless G${state.game} Prob</span><span class="mono">${r12.fearlessLocked ? '0% (Locked)' : r12.adjRate + '%'} (base ${r12.baseRate}%, ${r12.count})</span></div>
         <div class="kv"><span>Win Rate</span><span class="mono">${r12.wr}</span></div>
-        <div class="kv"><span>GD@15</span><span class="mono">${r12.gd15}</span></div>
-        <div class="callout">${r12.counter}</div>
+        <div class="kv"><span>GD@15 / ΔWP</span><span class="mono">${r12.gd15} · ${r12.epaDelta}</span></div>
+        <div class="callout mono" style="font-size:0.78rem">${r12.empMetric}</div>
         <details>
-          <summary>Recent drafts (${r12.matches.length})</summary>
+          <summary>Observed drafts (n=${r12.matches.length})</summary>
           ${r12.matches.map(m => `
             <div class="match-item">
               <div class="muted">${m.meta}</div>
@@ -525,6 +556,10 @@
       state.mode = e.target.value;
       state.b1Idx = 0;
       state.r12Idx = 0;
+      renderAll();
+    });
+    document.getElementById('gameMode').addEventListener('change', e => {
+      state.game = Number(e.target.value);
       renderAll();
     });
     document.body.addEventListener('click', e => {

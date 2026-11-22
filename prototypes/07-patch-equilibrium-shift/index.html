@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patch Equilibrium Shift | IWillDraft</title>
+  <style>
+    :root {
+      --bg: #0b0f15;
+      --surface: #111822;
+      --surface-2: #16202e;
+      --border: #1f2d40;
+      --accent: #38bdf8;
+      --accent-dim: rgba(56, 189, 248, 0.14);
+      --green: #10b981;
+      --green-dim: rgba(16, 185, 129, 0.14);
+      --amber: #f59e0b;
+      --amber-dim: rgba(245, 158, 11, 0.15);
+      --red: #f43f5e;
+      --red-dim: rgba(244, 63, 94, 0.15);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      --target-size: 24px;
+    }
+    @media (pointer: coarse) { :root { --target-size: 44px; } }
+    html { container-type: scroll-state; scroll-padding-top: 3.5rem; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-block-size: 100svh;
+      line-height: 1.45;
+      overflow-wrap: break-word;
+    }
+    h1, h2, h3 { text-wrap: balance; }
+    :where(button, select, nav a, input[type="range"]) {
+      min-block-size: var(--target-size);
+      min-inline-size: var(--target-size);
+    }
+    .topnav {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 8px 20px; background: rgba(8, 12, 18, 0.94);
+      border-block-end: 1px solid var(--border); font-size: 0.8rem;
+      transition: transform 0.2s ease;
+    }
+    @container scroll-state((scrolled: bottom) and (scrollable: top)) { .topnav { transform: translateY(-100%); } }
+    .topnav:focus-within { transform: none; }
+    .topnav a {
+      display: inline-flex; align-items: center; color: var(--muted);
+      text-decoration: none; padding: 4px 10px; border-radius: 6px;
+    }
+    .topnav a:hover { color: var(--text); background: var(--surface); }
+    .topnav a[aria-current="page"] { color: var(--accent); background: var(--accent-dim); font-weight: 600; }
+
+    .shell { max-inline-size: 1200px; margin-inline: auto; padding: 20px; }
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; flex-wrap: wrap; margin-block-end: 14px;
+    }
+    h1 { font-size: 1.4rem; letter-spacing: -0.02em; }
+    .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    select, button {
+      font-family: inherit; font-size: 0.84rem; color: var(--text);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 7px; padding: 6px 12px; cursor: pointer;
+    }
+    select:hover, button:hover { border-color: var(--accent); }
+    .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .seg button { border: 0; border-radius: 0; background: transparent; color: var(--muted); padding: 6px 10px; font-family: var(--mono); font-size: 0.78rem; }
+    .seg button[aria-pressed="true"] { background: var(--accent-dim); color: var(--accent); font-weight: 700; }
+
+    .perturb-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+      gap: 10px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 14px; margin-block-end: 16px;
+    }
+    .slider-item { display: grid; gap: 4px; font-size: 0.78rem; }
+    .slider-head { display: flex; justify-content: space-between; color: var(--muted); }
+    .slider-item input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+    .tablist {
+      display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 4px;
+      border-block-end: 1px solid var(--border); margin-block-end: 16px;
+      scrollbar-width: none;
+    }
+    .tablist::-webkit-scrollbar { display: none; }
+    [role="tab"] {
+      flex: none; white-space: nowrap; background: transparent; border: 0;
+      border-block-end: 2px solid transparent; border-radius: 0;
+      color: var(--muted); font-weight: 600; padding: 10px 14px;
+    }
+    [role="tab"][aria-selected="true"] { color: var(--accent); border-block-end-color: var(--accent); }
+    [role="tabpanel"][hidden] { display: none; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px;
+    }
+    .card-title { font-size: 0.92rem; font-weight: 700; margin-block-end: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .mono { font-family: var(--mono); }
+    .muted { color: var(--muted); }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .warn { color: var(--amber); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th {
+      text-align: left; font-size: 0.72rem; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--muted); padding: 8px 10px;
+      border-block-end: 1px solid var(--border);
+    }
+    td { padding: 10px; border-block-end: 1px solid rgba(31, 45, 64, 0.55); vertical-align: middle; }
+
+    .pill {
+      display: inline-block; font-family: var(--mono); font-size: 0.72rem;
+      padding: 2px 7px; border-radius: 999px; font-weight: 600;
+    }
+    .pill.pos { background: var(--green-dim); color: var(--green); }
+    .pill.neg { background: var(--red-dim); color: var(--red); }
+    .pill.warn { background: var(--amber-dim); color: var(--amber); }
+    .pill.neutral { background: var(--surface-2); color: var(--muted); }
+
+    .dual-bar { display: grid; gap: 4px; min-inline-size: 110px; }
+    .bar-bg { height: 6px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+    .bar-pi0 { height: 100%; background: var(--muted); opacity: 0.55; }
+    .bar-pi1 { height: 100%; background: var(--accent); }
+
+    .split { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 860px) { .split { grid-template-columns: 1fr 1.6fr; } }
+
+    .ply-list { display: grid; gap: 8px; }
+    .ply-btn {
+      width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--border);
+    }
+    .ply-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-dim); }
+    .ply-btn.locked { opacity: 0.48; }
+
+    .obj-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .obj-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  </style>
+</head>
+<body>
+  <nav class="topnav" aria-label="Prototype navigation">
+    <a href="../index.html">← All</a>
+    <a href="../01-universe-riser-matrix/index.html">01 Risers</a>
+    <a href="../02-conditional-phase1-trees/index.html">02 Draft Trees</a>
+    <a href="../03-fearless-pool-cliff-planner/index.html">03 Fearless Cliffs</a>
+    <a href="../04-rift-spatial-pathing-map/index.html">04 Early Pathing</a>
+    <a href="../05-playbook-huddle-stage-binder/index.html">05 Match Day</a>
+    <a href="../06-game-phase-epa-betrayal/index.html">06 Phase EPA</a>
+    <a href="../07-patch-equilibrium-shift/index.html" aria-current="page">07 Patch Shift</a>
+  </nav>
+
+  <main class="shell">
+    <header class="header">
+      <div>
+        <h1>Patch Equilibrium Shift (Post-Training Model)</h1>
+        <p class="muted" style="font-size:0.84rem;">Models patches as KL-regularized reward shifts π₁ ∝ π₀·exp(ΔR/τ) with Fearless lockouts and 2-ply chess-like response cascades.</p>
+      </div>
+      <div class="controls">
+        <select id="presetSelect" aria-label="Patch preset">
+          <option value="live2623">Patch 26.23 (Live ΔR)</option>
+          <option value="dragonMeta">Dragon Soul Buff (+ΔR)</option>
+          <option value="grubTempo">Voidgrubs / Plates Tempo</option>
+          <option value="durability">Durability + Scaling Shift</option>
+        </select>
+        <div class="seg" role="group" aria-label="Fearless game state">
+          <button type="button" data-game="1" aria-pressed="true">G1</button>
+          <button type="button" data-game="2" aria-pressed="false">G2</button>
+          <button type="button" data-game="3" aria-pressed="false">G3</button>
+          <button type="button" data-game="4" aria-pressed="false">G4</button>
+          <button type="button" data-game="5" aria-pressed="false">G5</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="perturb-grid" aria-label="Patch reward perturbations">
+      <div class="slider-item">
+        <div class="slider-head"><span>Dragon ΔR</span><strong class="mono" id="valDragon">+0.45</strong></div>
+        <input type="range" id="slDragon" min="-1.0" max="1.0" step="0.05" value="0.45" />
+      </div>
+      <div class="slider-item">
+        <div class="slider-head"><span>Grubs / Plates ΔR</span><strong class="mono" id="valGrubs">+0.25</strong></div>
+        <input type="range" id="slGrubs" min="-1.0" max="1.0" step="0.05" value="0.25" />
+      </div>
+      <div class="slider-item">
+        <div class="slider-head"><span>Durability ΔR</span><strong class="mono" id="valDurability">+0.35</strong></div>
+        <input type="range" id="slDurability" min="-1.0" max="1.0" step="0.05" value="0.35" />
+      </div>
+      <div class="slider-item">
+        <div class="slider-head"><span>2-Item Curve ΔR</span><strong class="mono" id="valItem">-0.20</strong></div>
+        <input type="range" id="slItem" min="-1.0" max="1.0" step="0.05" value="-0.20" />
+      </div>
+      <div class="slider-item">
+        <div class="slider-head"><span>KL Inertia (τ)</span><strong class="mono" id="valTau">0.85</strong></div>
+        <input type="range" id="slTau" min="0.30" max="2.00" step="0.05" value="0.85" />
+      </div>
+    </section>
+
+    <div class="tablist" role="tablist" aria-label="Equilibrium views">
+      <button role="tab" id="tab-eq" aria-selected="true" aria-controls="panel-eq">Policy Shift (π₀ → π₁)</button>
+      <button role="tab" id="tab-chess" aria-selected="false" aria-controls="panel-chess">Chess-Tree Cascade</button>
+      <button role="tab" id="tab-macro" aria-selected="false" aria-controls="panel-macro">Macro Objective Weights</button>
+    </div>
+
+    <section id="panel-eq" role="tabpanel" aria-labelledby="tab-eq">
+      <div class="card">
+        <div class="card-title">
+          <span>Archetype Equilibrium Distribution</span>
+          <span class="mono" id="klBadge" style="font-size:0.78rem;color:var(--accent);"></span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Archetype / Macro Identity</th>
+              <th>Pre-Patch π₀</th>
+              <th>Net ΔR</th>
+              <th>Post-Patch π₁</th>
+              <th>Shift Δ%</th>
+              <th>Fearless Enablers</th>
+              <th>π₀ vs π₁</th>
+            </tr>
+          </thead>
+          <tbody id="eqTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-chess" role="tabpanel" aria-labelledby="tab-chess" hidden>
+      <div class="split">
+        <div class="card">
+          <div class="card-title"><span>Ply-1 Opening Move (B1)</span><span class="mono muted" id="plyLockBadge" style="font-size:0.75rem;"></span></div>
+          <div class="ply-list" id="ply1List"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span id="ply2Title">Ply-2 Equilibrium Responses (R1/R2)</span></div>
+          <table>
+            <thead>
+              <tr>
+                <th>R1/R2 Response</th>
+                <th>Pre-Patch %</th>
+                <th>Post-Patch %</th>
+                <th>Post ΔEV (WP%)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="ply2Body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-macro" role="tabpanel" aria-labelledby="tab-macro" hidden>
+      <div class="card">
+        <div class="card-title"><span>Empirical Objective EPA Weights (Pre vs. Post Patch)</span></div>
+        <div class="obj-grid" id="macroGrid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="../shared/engine.js"></script>
+  <script>
+    (function () {
+      const E = window.IWillDraftEngine;
+
+      const PRESETS = {
+        live2623: { dragon: 0.45, grubs: 0.25, durability: 0.35, itemCurve: -0.20, tau: 0.85 },
+        dragonMeta: { dragon: 0.85, grubs: -0.35, durability: 0.40, itemCurve: 0.15, tau: 0.70 },
+        grubTempo: { dragon: -0.30, grubs: 0.90, durability: -0.35, itemCurve: 0.55, tau: 0.75 },
+        durability: { dragon: 0.30, grubs: -0.25, durability: 0.85, itemCurve: -0.45, tau: 0.95 }
+      };
+
+      const ARCHETYPES = [
+        { name: 'Dragon-Stack Front-to-Back', basePi: 0.28, sens: { dragon: 0.95, grubs: -0.25, durability: 0.70, itemCurve: -0.15 }, enablers: ['Azir', 'Orianna', 'Jinx', 'Rell'] },
+        { name: 'Grubs + Plate Snowball', basePi: 0.24, sens: { dragon: -0.20, grubs: 0.95, durability: -0.45, itemCurve: 0.75 }, enablers: ['Kalista', 'Renekton', 'Vi', 'Ahri'] },
+        { name: '1-3-1 Side-Lane Scaling', basePi: 0.18, sens: { dragon: 0.15, grubs: 0.35, durability: 0.45, itemCurve: 0.50 }, enablers: ['Jax', 'Gnar', 'Taliyah', 'Ambessa'] },
+        { name: 'Hard Dive / Pick Comp', basePi: 0.17, sens: { dragon: 0.10, grubs: 0.40, durability: -0.65, itemCurve: 0.45 }, enablers: ['Vi', 'Galio', 'Wukong', 'Kai\'Sa'] },
+        { name: 'Double-Marksman Siege', basePi: 0.13, sens: { dragon: 0.45, grubs: 0.20, durability: 0.30, itemCurve: -0.35 }, enablers: ['Corki', 'Varus', 'Sejuani', 'Nautilus'] }
+      ];
+
+      const OPENINGS = [
+        {
+          id: 'skarn', b1: 'Skarner', role: 'JGL', n: 42,
+          responses: [
+            { pair: 'Vi + Taliyah', champs: ['Vi', 'Taliyah'], baseShare: 0.36, baseEv: +1.4, sens: { dragon: 0.1, grubs: 0.7, durability: -0.4, itemCurve: 0.5 } },
+            { pair: 'Sejuani + Azir', champs: ['Sejuani', 'Azir'], baseShare: 0.28, baseEv: +0.9, sens: { dragon: 0.8, grubs: -0.1, durability: 0.7, itemCurve: -0.2 } },
+            { pair: 'Poppy + Aurora', champs: ['Poppy', 'Aurora'], baseShare: 0.22, baseEv: +1.8, sens: { dragon: 0.4, grubs: 0.3, durability: 0.5, itemCurve: 0.2 } },
+            { pair: 'Jarvan IV + Orianna', champs: ['Jarvan IV', 'Orianna'], baseShare: 0.14, baseEv: +0.4, sens: { dragon: 0.5, grubs: 0.2, durability: 0.3, itemCurve: 0.1 } }
+          ]
+        },
+        {
+          id: 'aurora', b1: 'Aurora', role: 'MID/TOP', n: 31,
+          responses: [
+            { pair: 'K\'Sante + Vi', champs: ['K\'Sante', 'Vi'], baseShare: 0.34, baseEv: +1.1, sens: { dragon: 0.2, grubs: 0.6, durability: 0.4, itemCurve: 0.3 } },
+            { pair: 'Jax + Xin Zhao', champs: ['Jax', 'Xin Zhao'], baseShare: 0.26, baseEv: +0.7, sens: { dragon: -0.1, grubs: 0.8, durability: -0.2, itemCurve: 0.7 } },
+            { pair: 'Ornn + Syndra', champs: ['Ornn', 'Syndra'], baseShare: 0.24, baseEv: +1.5, sens: { dragon: 0.8, grubs: -0.2, durability: 0.8, itemCurve: -0.1 } },
+            { pair: 'Ambessa + Wukong', champs: ['Ambessa', 'Wukong'], baseShare: 0.16, baseEv: +1.2, sens: { dragon: 0.2, grubs: 0.5, durability: 0.1, itemCurve: 0.6 } }
+          ]
+        },
+        {
+          id: 'varus', b1: 'Varus', role: 'BOT', n: 37,
+          responses: [
+            { pair: 'Kalista + Renata', champs: ['Kalista', 'Renata'], baseShare: 0.35, baseEv: +1.6, sens: { dragon: 0.6, grubs: 0.5, durability: -0.3, itemCurve: 0.4 } },
+            { pair: 'Jinx + Braum', champs: ['Jinx', 'Braum'], baseShare: 0.29, baseEv: +1.3, sens: { dragon: 0.8, grubs: -0.3, durability: 0.9, itemCurve: -0.2 } },
+            { pair: 'Kai\'Sa + Rakan', champs: ['Kai\'Sa', 'Rakan'], baseShare: 0.22, baseEv: +0.8, sens: { dragon: 0.2, grubs: 0.4, durability: -0.4, itemCurve: 0.6 } },
+            { pair: 'Xayah + Rell', champs: ['Xayah', 'Rell'], baseShare: 0.14, baseEv: +1.1, sens: { dragon: 0.7, grubs: 0.1, durability: 0.6, itemCurve: 0.0 } }
+          ]
+        }
+      ];
+
+      const OBJECTIVES = [
+        { name: 'Dragon 1–2 (Early Stack)', baseEpa: 2.1, sens: { dragon: 1.4, grubs: -0.3, durability: 0.3, itemCurve: 0.0 } },
+        { name: 'Dragon Soul Point', baseEpa: 7.4, sens: { dragon: 2.8, grubs: -0.4, durability: 0.9, itemCurve: -0.2 } },
+        { name: 'Voidgrubs (4–6 Stack)', baseEpa: 3.2, sens: { dragon: -0.3, grubs: 2.2, durability: -0.5, itemCurve: 0.7 } },
+        { name: 'Rift Herald + Plates', baseEpa: 2.9, sens: { dragon: -0.2, grubs: 1.6, durability: -0.4, itemCurve: 0.8 } },
+        { name: 'Atakhan (20:00 State)', baseEpa: 5.6, sens: { dragon: 0.6, grubs: 0.4, durability: 1.1, itemCurve: 0.4 } },
+        { name: 'Baron Nashor (25:00+)', baseEpa: 8.8, sens: { dragon: 0.4, grubs: 0.2, durability: 1.6, itemCurve: -0.5 } }
+      ];
+
+      const state = {
+        reward: { dragon: 0.45, grubs: 0.25, durability: 0.35, itemCurve: -0.20 },
+        tau: 0.85,
+        game: 1,
+        selectedOpening: 'skarn'
+      };
+
+      function fmt(n, suffix) { return (n > 0 ? '+' : '') + n.toFixed(2) + (suffix || ''); }
+      function fmt1(n, suffix) { return (n > 0 ? '+' : '') + n.toFixed(1) + (suffix || ''); }
+
+      function render() {
+        document.getElementById('valDragon').textContent = fmt(state.reward.dragon);
+        document.getElementById('valGrubs').textContent = fmt(state.reward.grubs);
+        document.getElementById('valDurability').textContent = fmt(state.reward.durability);
+        document.getElementById('valItem').textContent = fmt(state.reward.itemCurve);
+        document.getElementById('valTau').textContent = state.tau.toFixed(2);
+
+        const eq = E.solvePostTrainingEquilibrium(ARCHETYPES, state.reward, state.tau, state.game);
+        const lockedCount = E.getLockedCount(state.game);
+        const lockedSet = E.getLockedChampions(state.game);
+
+        document.getElementById('klBadge').textContent = 'KL(π₁ ‖ π₀) = ' + eq.klDivergence.toFixed(3) + ' nats · Fearless G' + state.game + ' (' + lockedCount + ' locked)';
+
+        document.getElementById('eqTableBody').innerHTML = eq.archetypes.slice().sort(function (a, b) {
+          return b.pi1Pct - a.pi1Pct;
+        }).map(function (a) {
+          const sCls = a.shiftPct >= 1.5 ? 'pos' : (a.shiftPct <= -1.5 ? 'neg' : 'neutral');
+          return '<tr>' +
+            '<td><strong>' + a.name + '</strong></td>' +
+            '<td class="mono muted">' + a.pi0Pct.toFixed(1) + '%</td>' +
+            '<td class="mono ' + (a.deltaR >= 0 ? 'pos' : 'neg') + '">' + fmt(a.deltaR) + '</td>' +
+            '<td class="mono"><strong>' + a.pi1Pct.toFixed(1) + '%</strong></td>' +
+            '<td><span class="pill ' + sCls + '">' + fmt1(a.shiftPct, '%') + '</span></td>' +
+            '<td class="mono muted">' + (a.totalEnablers - a.lockedEnablers) + '/' + a.totalEnablers + ' legal</td>' +
+            '<td><div class="dual-bar">' +
+              '<div class="bar-bg"><div class="bar-pi0" style="width:' + Math.min(100, a.pi0Pct * 2.2) + '%"></div></div>' +
+              '<div class="bar-bg"><div class="bar-pi1" style="width:' + Math.min(100, a.pi1Pct * 2.2) + '%"></div></div>' +
+            '</div></td>' +
+          '</tr>';
+        }).join('');
+
+        // Chess-tree cascade
+        document.getElementById('plyLockBadge').textContent = 'G' + state.game + ' · ' + lockedCount + ' Locked';
+        document.getElementById('ply1List').innerHTML = OPENINGS.map(function (o) {
+          const isLocked = lockedSet.has(o.b1);
+          return '<button type="button" class="ply-btn' + (isLocked ? ' locked' : '') + '" data-open="' + o.id + '" aria-pressed="' + (o.id === state.selectedOpening) + '">' +
+            '<span><strong>B1 ' + o.b1 + '</strong> <span class="mono muted">' + o.role + ' · n=' + o.n + '</span></span>' +
+            '<span class="pill ' + (isLocked ? 'neg' : 'neutral') + '">' + (isLocked ? 'Fearless Locked' : 'Legal') + '</span>' +
+          '</button>';
+        }).join('');
+
+        const activeOpen = OPENINGS.find(function (o) { return o.id === state.selectedOpening; }) || OPENINGS[0];
+        document.getElementById('ply2Title').textContent = 'Ply-2 Optimal Responses vs. B1 ' + activeOpen.b1;
+        const responses = E.solveChessResponse(activeOpen, state.reward, state.tau, state.game);
+
+        document.getElementById('ply2Body').innerHTML = responses.sort(function (a, b) {
+          return b.postSharePct - a.postSharePct;
+        }).map(function (r) {
+          return '<tr style="' + (r.locked ? 'opacity:0.48;' : '') + '">' +
+            '<td><strong>' + r.pair + '</strong></td>' +
+            '<td class="mono muted">' + Math.round(r.baseShare * 100) + '%</td>' +
+            '<td class="mono"><strong>' + r.postSharePct + '%</strong></td>' +
+            '<td class="mono ' + (r.postEv >= 0 ? 'pos' : 'neg') + '">' + fmt1(r.postEv, '%') + ' <span class="muted">(' + fmt1(r.evDelta, '') + ')</span></td>' +
+            '<td><span class="pill ' + (r.locked ? 'neg' : 'pos') + '">' + (r.locked ? 'Locked G' + state.game : 'Legal') + '</span></td>' +
+          '</tr>';
+        }).join('');
+
+        // Macro Objective Weights
+        document.getElementById('macroGrid').innerHTML = OBJECTIVES.map(function (obj) {
+          const delta =
+            state.reward.dragon * obj.sens.dragon +
+            state.reward.grubs * obj.sens.grubs +
+            state.reward.durability * obj.sens.durability +
+            state.reward.itemCurve * obj.sens.itemCurve;
+          const postEpa = Math.max(0.4, obj.baseEpa + delta);
+          const diff = postEpa - obj.baseEpa;
+          return '<div class="obj-card">' +
+            '<div class="muted" style="font-size:0.78rem;">' + obj.name + '</div>' +
+            '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-block-start:6px;">' +
+              '<span class="mono" style="font-size:1.15rem;font-weight:700;">' + postEpa.toFixed(1) + '% EPA</span>' +
+              '<span class="pill ' + (diff >= 0.2 ? 'pos' : (diff <= -0.2 ? 'neg' : 'neutral')) + '">' + fmt1(diff, '%') + '</span>' +
+            '</div>' +
+            '<div class="mono muted" style="font-size:0.74rem;margin-block-start:4px;">Pre-patch baseline: ' + obj.baseEpa.toFixed(1) + '%</div>' +
+          '</div>';
+        }).join('');
+      }
+
+      // Bindings
+      function syncSliders() {
+        document.getElementById('slDragon').value = state.reward.dragon;
+        document.getElementById('slGrubs').value = state.reward.grubs;
+        document.getElementById('slDurability').value = state.reward.durability;
+        document.getElementById('slItem').value = state.reward.itemCurve;
+        document.getElementById('slTau').value = state.tau;
+      }
+
+      document.getElementById('presetSelect').addEventListener('change', function (e) {
+        const p = PRESETS[e.target.value];
+        if (!p) return;
+        state.reward = { dragon: p.dragon, grubs: p.grubs, durability: p.durability, itemCurve: p.itemCurve };
+        state.tau = p.tau;
+        syncSliders();
+        render();
+      });
+
+      [['slDragon', 'dragon'], ['slGrubs', 'grubs'], ['slDurability', 'durability'], ['slItem', 'itemCurve']].forEach(function (pair) {
+        document.getElementById(pair[0]).addEventListener('input', function (e) {
+          state.reward[pair[1]] = Number(e.target.value);
+          render();
+        });
+      });
+      document.getElementById('slTau').addEventListener('input', function (e) {
+        state.tau = Number(e.target.value);
+        render();
+      });
+
+      document.querySelectorAll('.seg button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          state.game = Number(btn.dataset.game);
+          document.querySelectorAll('.seg button').forEach(function (b) {
+            b.setAttribute('aria-pressed', String(b === btn));
+          });
+          render();
+        });
+      });
+
+      document.getElementById('ply1List').addEventListener('click', function (e) {
+        const btn = e.target.closest('button[data-open]');
+        if (!btn) return;
+        state.selectedOpening = btn.dataset.open;
+        render();
+      });
+
+      const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          tabs.forEach(function (t) {
+            const active = t === tab;
+            t.setAttribute('aria-selected', String(active));
+            document.getElementById(t.getAttribute('aria-controls')).hidden = !active;
+          });
+        });
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>

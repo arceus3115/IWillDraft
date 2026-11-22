@@ -260,6 +260,8 @@
     <a aria-current="page" href="../03-fearless-pool-cliff-planner/index.html">03 Fearless Cliffs</a>
     <a href="../04-rift-spatial-pathing-map/index.html">04 Early Pathing</a>
     <a href="../05-playbook-huddle-stage-binder/index.html">05 Match Day</a>
+    <a href="../06-game-phase-epa-betrayal/index.html">06 Phase EPA</a>
+    <a href="../07-patch-equilibrium-shift/index.html">07 Patch Shift</a>
   </nav>
 
   <div class="shell">
@@ -277,7 +279,7 @@
 
     <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Fearless views" id="tablist">
       <button type="button" role="tab" id="tab-0" aria-selected="true" focusgroupstart tabindex="0" data-step="0">Pool Decay</button>
-      <button type="button" role="tab" id="tab-1" aria-selected="false" tabindex="-1" data-step="1">G1–G2 Strategy</button>
+      <button type="button" role="tab" id="tab-1" aria-selected="false" tabindex="-1" data-step="1">Series EV Tradeoff</button>
       <button type="button" role="tab" id="tab-2" aria-selected="false" tabindex="-1" data-step="2">Pinch Simulator</button>
     </div>
 
@@ -302,82 +304,84 @@
     </div>
   </div>
 
+  <script src="../shared/engine.js"></script>
   <script>
+    const E = window.IWillDraftEngine;
     const PLAYERS = [
       {
         id: 'quad', name: 'Quad', role: 'MID', status: 'Cliff at G4',
         gdByGame: ['+340g', '+260g', '+90g', '-390g', '-540g'],
         wrByGame: ['72%', '67%', '54%', '31%', '25%'],
         comfort: [
-          { name: 'Orianna', lockedAt: 1 },
-          { name: 'Azir', lockedAt: 2 },
-          { name: 'Galio', lockedAt: 3 },
-          { name: 'Taliyah', lockedAt: 4 },
-          { name: 'Hwei', lockedAt: 99 },
-          { name: 'Syndra', lockedAt: 99 }
+          { name: 'Orianna', lockedAt: 1, epa: +2.9 },
+          { name: 'Azir', lockedAt: 2, epa: +2.6 },
+          { name: 'Galio', lockedAt: 3, epa: +2.1 },
+          { name: 'Taliyah', lockedAt: 4, epa: +1.4 },
+          { name: 'Hwei', lockedAt: 99, epa: +0.6 },
+          { name: 'Syndra', lockedAt: 99, epa: +0.2 }
         ],
-        pockets: ['Cassiopeia (1 game)', 'Viktor (unplayed)', 'Tristana Mid (forces 84% AD)']
+        pockets: ['Cassiopeia (n=1, -1.8% EPA)', 'Viktor (n=0)', 'Tristana (84% team AD share)']
       },
       {
         id: 'massu', name: 'Massu', role: 'BOT', status: 'Drops at G4',
         gdByGame: ['+280g', '+210g', '+120g', '-190g', '-310g'],
         wrByGame: ['68%', '64%', '58%', '42%', '38%'],
         comfort: [
-          { name: 'Kalista', lockedAt: 1 },
-          { name: 'Varus', lockedAt: 2 },
-          { name: 'KaiSa', lockedAt: 3 },
-          { name: 'Ashe', lockedAt: 4 },
-          { name: 'Ezreal', lockedAt: 5 },
-          { name: 'Jhin', lockedAt: 99 }
+          { name: 'Kalista', lockedAt: 1, epa: +2.7 },
+          { name: 'Varus', lockedAt: 2, epa: +2.3 },
+          { name: 'KaiSa', lockedAt: 3, epa: +1.6 },
+          { name: 'Ashe', lockedAt: 4, epa: +1.1 },
+          { name: 'Ezreal', lockedAt: 5, epa: -0.2 },
+          { name: 'Jhin', lockedAt: 99, epa: -0.9 }
         ],
-        pockets: ['Ziggs Bot', 'Xayah (33% WR)']
+        pockets: ['Ziggs (n=2, 50% WR)', 'Xayah (n=3, 33% WR)']
       },
       {
         id: 'inspired', name: 'Inspired', role: 'JGL', status: 'Deep Pool',
         gdByGame: ['+410g', '+390g', '+360g', '+330g', '+350g'],
         wrByGame: ['71%', '70%', '68%', '66%', '67%'],
         comfort: [
-          { name: 'Vi', lockedAt: 1 },
-          { name: 'Sejuani', lockedAt: 2 },
-          { name: 'Maokai', lockedAt: 3 },
-          { name: 'Skarner', lockedAt: 4 },
-          { name: 'Ivern', lockedAt: 99 },
-          { name: 'Viego', lockedAt: 99 },
-          { name: 'Fiddlesticks', lockedAt: 99 }
+          { name: 'Vi', lockedAt: 1, epa: +3.4 },
+          { name: 'Sejuani', lockedAt: 2, epa: +3.1 },
+          { name: 'Maokai', lockedAt: 3, epa: +2.8 },
+          { name: 'Skarner', lockedAt: 4, epa: +2.5 },
+          { name: 'Ivern', lockedAt: 99, epa: +2.4 },
+          { name: 'Viego', lockedAt: 99, epa: +2.2 },
+          { name: 'Fiddlesticks', lockedAt: 99, epa: +2.1 }
         ],
-        pockets: ['Skip Jungle pinch bans—no G4/G5 drop-off.']
+        pockets: ['G4–G5 Replacement EPA +2.1% (Δ -0.3% vs G1)']
       },
       {
-        id: 'bwipo', name: 'Bwipo', role: 'TOP', status: 'Wildcard',
+        id: 'bwipo', name: 'Bwipo', role: 'TOP', status: 'High Variance',
         gdByGame: ['+190g', '+140g', '+110g', '-80g', '+120g'],
         wrByGame: ['62%', '59%', '55%', '48%', '55%'],
         comfort: [
-          { name: 'Rumble', lockedAt: 1 },
-          { name: 'Renekton', lockedAt: 2 },
-          { name: 'Gnar', lockedAt: 3 },
-          { name: 'Olaf', lockedAt: 5 },
-          { name: 'Mordekaiser', lockedAt: 99 },
-          { name: 'Urgot', lockedAt: 99 }
+          { name: 'Rumble', lockedAt: 1, epa: +2.2 },
+          { name: 'Renekton', lockedAt: 2, epa: +1.5 },
+          { name: 'Gnar', lockedAt: 3, epa: +1.2 },
+          { name: 'Olaf', lockedAt: 5, epa: +0.9 },
+          { name: 'Mordekaiser', lockedAt: 99, epa: +0.4 },
+          { name: 'Urgot', lockedAt: 99, epa: +0.7 }
         ],
-        pockets: ['Sett / Cho’Gath R5 counter']
+        pockets: ['Sett (n=4, σ=14.2%)', 'Cho’Gath (n=3, 67% WR)']
       }
     ];
 
     const PLANS = [
       {
         id: 'take',
-        title: 'Take S-Tier Early',
-        summary: 'Prioritize Jungle/Bot power picks in G1–G2.',
-        g4Impact: 'Quad still enters G4 with Galio, Taliyah, and Hwei open.',
-        verdict: 'Stronger G1 · No G4 Mid cliff',
+        title: 'Burn S-Tier Early (G1–G2)',
+        pSuccess: 0.62, gainWP: +7.5, lossWP: -9.8,
+        midLockShift: 1,
+        g4Impact: 'G1–G2 ΔWP +4.6% · Quad enters G4 with 3 comfort picks open (Rep EPA +1.4%).',
         tone: 'warn'
       },
       {
         id: 'starve',
-        title: 'Starve Mid Pool',
-        summary: 'Handshake Azir/Orianna G1 and burn Galio/Taliyah by G3.',
-        g4Impact: 'Two Phase-2 bans (Hwei + Syndra) strip 100% of Quad’s AP waveclear in G4.',
-        verdict: 'Forces rusty AP or 84% AD comp',
+        title: 'Mid-Pool Depletion (G1–G3)',
+        pSuccess: 0.56, gainWP: +12.4, lossWP: -6.2,
+        midLockShift: 0,
+        g4Impact: 'G4 Replacement EPA drops to -3.5% with 2 pinch bans (0 comfort picks remaining).',
         tone: 'safe'
       }
     ];
@@ -419,76 +423,99 @@
         b.setAttribute('aria-pressed', String(Number(b.dataset.g) === state.game));
       });
 
+      const activePlan = PLANS.find(x => x.id === state.plan) || PLANS[1];
+      const lockShiftFor = (playerId) => playerId === 'quad' ? activePlan.midLockShift : 0;
+
       document.getElementById('decayList').innerHTML = PLAYERS.map(p => {
+        const shift = lockShiftFor(p.id);
+        const lockedNames = new Set(p.comfort.filter(c => (c.lockedAt + shift) < state.game).map(c => c.name));
+        state.pinchBans.forEach(b => lockedNames.add(b));
+        const vorp = E.computeFearlessVORP(p.comfort.map(c => ({ champ: c.name, epa: c.epa })), lockedNames);
         const gd = p.gdByGame[state.game - 1];
         const wr = p.wrByGame[state.game - 1];
-        const isCliff = gd.startsWith('-');
+        const isCliff = vorp.replacementEpa < 0;
         return `
           <div class="role-row ${p.id === state.selectedPlayer ? 'active' : ''}" data-player="${p.id}">
             <div class="row-top">
               <strong>${p.name} <span class="mono muted">${p.role}</span></strong>
               <div style="display:flex;gap:8px;align-items:center">
-                <span class="tag ${isCliff ? 'cliff' : 'safe'}">${gd} · ${wr}</span>
-                <span class="muted">${p.status}</span>
+                <span class="tag ${isCliff ? 'cliff' : 'safe'}">Rep EPA ${vorp.replacementEpa >= 0 ? '+' : ''}${vorp.replacementEpa}% · ${wr}</span>
+                <span class="muted mono" style="font-size:0.78rem">${gd}</span>
               </div>
             </div>
             <div class="chips">
               ${p.comfort.map(c => {
-                const isLocked = c.lockedAt < state.game;
+                const effLock = c.lockedAt + shift;
+                const isLocked = effLock < state.game;
                 const isPinch = !isLocked && state.pinchBans.has(c.name);
-                return `<span class="chip ${isLocked ? 'locked' : ''} ${isPinch ? 'pinch' : ''}">${c.name}${isLocked ? ' G' + c.lockedAt : isPinch ? ' · Ban' : ''}</span>`;
+                return `<span class="chip ${isLocked ? 'locked' : ''} ${isPinch ? 'pinch' : ''}">${c.name}${isLocked ? ' G' + effLock : isPinch ? ' · Ban' : ''}</span>`;
               }).join('')}
             </div>
           </div>
         `;
       }).join('');
 
-      document.getElementById('planGrid').innerHTML = PLANS.map(pl => `
+      document.getElementById('planGrid').innerHTML = PLANS.map(pl => {
+        const pt = E.evaluateProspectDecision(pl.pSuccess, pl.gainWP, pl.lossWP);
+        return `
         <button type="button" class="plan-box ${state.plan === pl.id ? 'active' : ''}" data-plan="${pl.id}">
           <h2 style="font-size:1rem;margin-block-end:6px">${pl.title}</h2>
-          <p class="muted" style="margin-block-end:10px">${pl.summary}</p>
+          <p class="mono muted" style="margin-block-end:8px;font-size:0.8rem">Risk-Neutral EV: ${pt.ev >= 0 ? '+' : ''}${pt.ev}% · Prospect U_PT: ${pt.uPT >= 0 ? '+' : ''}${pt.uPT}</p>
           <p style="font-size:0.84rem;margin-block-end:10px">${pl.g4Impact}</p>
-          <span class="tag ${pl.tone}">${pl.verdict}</span>
+          <span class="tag ${pl.tone}">p=${Math.round(pl.pSuccess * 100)}% · Bias Gap ${pt.biasGap >= 0 ? '+' : ''}${pt.biasGap}</span>
         </button>
-      `).join('');
+      `;
+      }).join('');
 
       const quad = PLAYERS[0];
-      const openComfort = quad.comfort.filter(c => c.lockedAt >= state.game && !state.pinchBans.has(c.name));
+      const qShift = lockShiftFor('quad');
+      const openComfort = quad.comfort.filter(c => (c.lockedAt + qShift) >= state.game && !state.pinchBans.has(c.name));
+      const qLocked = new Set(quad.comfort.filter(c => (c.lockedAt + qShift) < state.game).map(c => c.name));
+      state.pinchBans.forEach(b => qLocked.add(b));
+      const qVorp = E.computeFearlessVORP(quad.comfort.map(c => ({ champ: c.name, epa: c.epa })), qLocked);
+
       document.getElementById('cliffForecaster').innerHTML = `
         <div class="row-top" style="margin-block-end:10px">
-          <strong>Quad (Mid) · Game ${state.game}</strong>
+          <strong>Quad (Mid) · Game ${state.game} (${activePlan.id === 'take' ? 'Burn Early' : 'Mid Depletion'})</strong>
           <span class="tag ${openComfort.length === 0 ? 'cliff' : 'warn'}">
-            ${openComfort.length === 0 ? '0 AP comfort left' : openComfort.length + ' open'}
+            ${openComfort.length === 0 ? '0 comfort · Rep EPA ' + qVorp.replacementEpa + '%' : openComfort.length + ' open · Rep EPA ' + (qVorp.replacementEpa >= 0 ? '+' : '') + qVorp.replacementEpa + '%'}
           </span>
         </div>
         <div class="chips" style="margin-block-end:14px">
           ${quad.comfort.map(c => {
-            const isLocked = c.lockedAt < state.game;
+            const effLock = c.lockedAt + qShift;
+            const isLocked = effLock < state.game;
             const isPinch = state.pinchBans.has(c.name);
             return `<button type="button" class="chip ${isLocked ? 'locked' : ''} ${isPinch ? 'pinch' : ''}" ${isLocked ? 'disabled' : `data-toggleban="${c.name}"`}>
-              ${c.name}${isLocked ? ' (G' + c.lockedAt + ')' : isPinch ? ' ✕' : ''}
+              ${c.name}${isLocked ? ' (G' + effLock + ')' : isPinch ? ' ✕' : ''}
             </button>`;
           }).join('')}
         </div>
-        <div class="muted" style="margin-block-end:6px">Forced fallbacks</div>
+        <div class="muted" style="margin-block-end:6px">Empirical fallback pool</div>
         <div class="chips">
           ${quad.pockets.map(pk => `<span class="chip pocket">${pk}</span>`).join('')}
         </div>
       `;
 
       const sel = PLAYERS.find(x => x.id === state.selectedPlayer) || PLAYERS[0];
+      const sShift = lockShiftFor(sel.id);
+      const sLocked = new Set(sel.comfort.filter(c => (c.lockedAt + sShift) < state.game).map(c => c.name));
+      state.pinchBans.forEach(b => sLocked.add(b));
+      const sVorp = E.computeFearlessVORP(sel.comfort.map(c => ({ champ: c.name, epa: c.epa })), sLocked);
       document.getElementById('cliffInspector').innerHTML = `
         <h2 style="font-size:1.05rem;margin-block-end:8px">${sel.name} <span class="mono muted">${sel.role}</span></h2>
+        <div class="kv"><span>G${state.game} Replacement EPA</span><span class="mono">${sVorp.replacementEpa >= 0 ? '+' : ''}${sVorp.replacementEpa}%</span></div>
+        <div class="kv"><span>Top-to-Rep Cliff Δ</span><span class="mono">${sVorp.cliffDelta >= 0 ? '+' : ''}${sVorp.cliffDelta}%</span></div>
         ${sel.gdByGame.map((gd, i) => `
           <div class="kv ${i + 1 === state.game ? 'current' : ''}">
             <span>Game ${i + 1}</span>
             <span class="mono">${gd} · ${sel.wrByGame[i]}</span>
           </div>
         `).join('')}
-        <div class="callout ${openComfort.length === 0 ? 'alert' : ''}">
-          ${openComfort.length === 0
-            ? 'Quad has no proven AP waveclear left—armor-stack frontlines (K’Sante/Ornn) spike in value.'
-            : 'Move to Game 4+ or toggle 2 pinch bans on Quad to trigger the AP pool cliff.'}
+        <div class="callout mono ${sVorp.replacementEpa < 0 ? 'alert' : ''}" style="font-size:0.78rem">
+          ${sVorp.available.length === 0
+            ? '0 proven comfort picks open · Replacement EPA -3.5% · Historical G4/G5 WR 28%.'
+            : 'Remaining legal comfort: ' + sVorp.available.length + ' · Avg EPA ' + (sVorp.avgEpa >= 0 ? '+' : '') + sVorp.avgEpa + '%.'}
         </div>
       `;
     }

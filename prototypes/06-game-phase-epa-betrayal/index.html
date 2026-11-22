@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phase EPA &amp; Betrayal | IWillDraft</title>
+  <style>
+    :root {
+      --bg: #0b0f15;
+      --surface: #111822;
+      --surface-2: #16202e;
+      --border: #1f2d40;
+      --accent: #38bdf8;
+      --accent-dim: rgba(56, 189, 248, 0.14);
+      --green: #10b981;
+      --green-dim: rgba(16, 185, 129, 0.14);
+      --amber: #f59e0b;
+      --amber-dim: rgba(245, 158, 11, 0.15);
+      --red: #f43f5e;
+      --red-dim: rgba(244, 63, 94, 0.15);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      --target-size: 24px;
+    }
+    @media (pointer: coarse) { :root { --target-size: 44px; } }
+    html { container-type: scroll-state; scroll-padding-top: 3.5rem; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-block-size: 100svh;
+      line-height: 1.45;
+      overflow-wrap: break-word;
+    }
+    h1, h2, h3 { text-wrap: balance; }
+    p, li { text-wrap: pretty; }
+    :where(button, select, nav a, summary, input[type="range"]) {
+      min-block-size: var(--target-size);
+      min-inline-size: var(--target-size);
+    }
+    .topnav {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 8px 20px; background: rgba(8, 12, 18, 0.94);
+      border-block-end: 1px solid var(--border); font-size: 0.8rem;
+      transition: transform 0.2s ease;
+    }
+    @container scroll-state((scrolled: bottom) and (scrollable: top)) { .topnav { transform: translateY(-100%); } }
+    .topnav:focus-within { transform: none; }
+    .topnav.is-hidden:not(:focus-within) { transform: translateY(-100%); }
+    .topnav a {
+      display: inline-flex; align-items: center; color: var(--muted);
+      text-decoration: none; padding: 4px 10px; border-radius: 6px;
+    }
+    .topnav a:hover { color: var(--text); background: var(--surface); }
+    .topnav a[aria-current="page"] { color: var(--accent); background: var(--accent-dim); font-weight: 600; }
+
+    .shell { max-inline-size: 1200px; margin-inline: auto; padding: 20px; }
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; flex-wrap: wrap; margin-block-end: 16px;
+    }
+    h1 { font-size: 1.4rem; letter-spacing: -0.02em; }
+    .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    select, button {
+      font-family: inherit; font-size: 0.85rem; color: var(--text);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 7px; padding: 6px 12px; cursor: pointer;
+    }
+    select:hover, button:hover { border-color: var(--accent); }
+    .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .seg button { border: 0; border-radius: 0; background: transparent; color: var(--muted); padding: 6px 10px; font-family: var(--mono); font-size: 0.78rem; }
+    .seg button[aria-pressed="true"] { background: var(--accent-dim); color: var(--accent); font-weight: 700; }
+
+    .tablist {
+      display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 4px;
+      border-block-end: 1px solid var(--border); margin-block-end: 18px;
+      scrollbar-width: none;
+    }
+    .tablist::-webkit-scrollbar { display: none; }
+    [role="tab"] {
+      flex: none; white-space: nowrap; background: transparent; border: 0;
+      border-block-end: 2px solid transparent; border-radius: 0;
+      color: var(--muted); font-weight: 600; padding: 10px 14px;
+    }
+    [role="tab"]:hover { color: var(--text); }
+    [role="tab"][aria-selected="true"] { color: var(--accent); border-block-end-color: var(--accent); }
+    [role="tabpanel"][hidden] { display: none; }
+
+    .kpi-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px; margin-block-end: 16px;
+    }
+    .kpi {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px;
+    }
+    .kpi-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi-val { font-family: var(--mono); font-size: 1.25rem; font-weight: 700; margin-block-start: 4px; }
+    .kpi-sub { font-size: 0.75rem; color: var(--muted); margin-block-start: 2px; font-family: var(--mono); }
+
+    .split { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 900px) { .split { grid-template-columns: 1.55fr 1fr; } }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px;
+    }
+    .card-title { font-size: 0.92rem; font-weight: 700; margin-block-end: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .mono { font-family: var(--mono); }
+    .muted { color: var(--muted); }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .warn { color: var(--amber); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th {
+      text-align: left; font-size: 0.72rem; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--muted); padding: 8px 10px;
+      border-block-end: 1px solid var(--border);
+    }
+    td { padding: 10px; border-block-end: 1px solid rgba(31, 45, 64, 0.55); vertical-align: middle; }
+    tr.selectable { cursor: pointer; }
+    tr.selectable:hover { background: var(--surface-2); }
+    tr.selectable[aria-selected="true"] { background: var(--accent-dim); }
+
+    .bar-track {
+      position: relative; height: 8px; background: var(--surface-2);
+      border-radius: 4px; overflow: hidden; min-inline-size: 84px;
+    }
+    .bar-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--border); }
+    .bar-fill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+
+    .pill {
+      display: inline-block; font-family: var(--mono); font-size: 0.72rem;
+      padding: 2px 7px; border-radius: 999px; font-weight: 600;
+    }
+    .pill.pos { background: var(--green-dim); color: var(--green); }
+    .pill.neg { background: var(--red-dim); color: var(--red); }
+    .pill.warn { background: var(--amber-dim); color: var(--amber); }
+    .pill.neutral { background: var(--surface-2); color: var(--muted); }
+
+    .stat-list { display: grid; gap: 8px; }
+    .stat-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 10px; background: var(--surface-2); border-radius: 8px;
+      font-size: 0.82rem;
+    }
+
+    .slider-bar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 14px; margin-block-end: 14px;
+      font-size: 0.82rem;
+    }
+    .slider-bar input[type="range"] { accent-color: var(--accent); inline-size: 160px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 820px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+
+    .pt-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; display: grid; gap: 10px;
+    }
+    .pt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .pt-cell { background: var(--surface-2); border-radius: 8px; padding: 8px; }
+    .pt-cell .lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; }
+    .pt-cell .val { font-family: var(--mono); font-size: 0.95rem; font-weight: 700; margin-block-start: 2px; }
+  </style>
+</head>
+<body>
+  <nav class="topnav" aria-label="Prototype navigation">
+    <a href="../index.html">← All</a>
+    <a href="../01-universe-riser-matrix/index.html">01 Risers</a>
+    <a href="../02-conditional-phase1-trees/index.html">02 Draft Trees</a>
+    <a href="../03-fearless-pool-cliff-planner/index.html">03 Fearless Cliffs</a>
+    <a href="../04-rift-spatial-pathing-map/index.html">04 Early Pathing</a>
+    <a href="../05-playbook-huddle-stage-binder/index.html">05 Match Day</a>
+    <a href="../06-game-phase-epa-betrayal/index.html" aria-current="page">06 Phase EPA</a>
+    <a href="../07-patch-equilibrium-shift/index.html">07 Patch Shift</a>
+  </nav>
+
+  <main class="shell">
+    <header class="header">
+      <div>
+        <h1>Phase EPA &amp; Betrayal Index</h1>
+        <p class="muted" style="font-size:0.84rem;">Quantized game phases, expected win-probability added, unit betrayal divergence, and Prospect Theory decision audits.</p>
+      </div>
+      <div class="controls">
+        <select id="teamSelect" aria-label="Select team">
+          <option value="C9">Cloud9 (n = 34 games)</option>
+          <option value="FLY">FlyQuest (n = 38 games)</option>
+          <option value="TL">Team Liquid (n = 32 games)</option>
+        </select>
+        <div class="seg" role="group" aria-label="Fearless game state">
+          <button type="button" data-game="1" aria-pressed="true">G1</button>
+          <button type="button" data-game="2" aria-pressed="false">G2</button>
+          <button type="button" data-game="3" aria-pressed="false">G3</button>
+          <button type="button" data-game="4" aria-pressed="false">G4</button>
+          <button type="button" data-game="5" aria-pressed="false">G5</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <div class="tablist" role="tablist" aria-label="Analytics views">
+      <button role="tab" id="tab-phases" aria-selected="true" aria-controls="panel-phases">Phase Breakdown</button>
+      <button role="tab" id="tab-betrayal" aria-selected="false" aria-controls="panel-betrayal">Betrayal Index</button>
+      <button role="tab" id="tab-prospect" aria-selected="false" aria-controls="panel-prospect">Prospect Theory Audit</button>
+    </div>
+
+    <section id="panel-phases" role="tabpanel" aria-labelledby="tab-phases">
+      <div class="split">
+        <div class="card">
+          <div class="card-title">
+            <span>Quantized Game Phases</span>
+            <span class="mono muted" id="fearlessBadge" style="font-size:0.75rem;"></span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Phase</th>
+                <th>EPA (ΔWP%)</th>
+                <th>SR%</th>
+                <th>LI</th>
+                <th>n</th>
+                <th>ΔWP Profile</th>
+              </tr>
+            </thead>
+            <tbody id="phaseTableBody"></tbody>
+          </table>
+        </div>
+        <div class="card" id="phaseInspector"></div>
+      </div>
+    </section>
+
+    <section id="panel-betrayal" role="tabpanel" aria-labelledby="tab-betrayal" hidden>
+      <div class="split">
+        <div class="card">
+          <div class="card-title">
+            <span>Unit Betrayal Index (Unit EPA vs. Rest-of-Team EPA)</span>
+            <span class="mono muted" style="font-size:0.75rem;">BI &gt; +3.0 = Betrayed</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Player · Role</th>
+                <th>Unit EPA</th>
+                <th>Team Excl.</th>
+                <th>Betrayal Index</th>
+                <th>SR%</th>
+              </tr>
+            </thead>
+            <tbody id="unitBetrayalBody"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title"><span>Phase-Handoff Betrayal</span></div>
+          <div class="stat-list" id="phaseHandoffList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-prospect" role="tabpanel" aria-labelledby="tab-prospect" hidden>
+      <div class="slider-bar">
+        <label for="lambdaSlider"><strong>Loss Aversion (λ):</strong> <span class="mono" id="lambdaVal">2.25</span></label>
+        <input id="lambdaSlider" type="range" min="1.0" max="3.2" step="0.05" value="2.25" />
+        <span class="muted">1.00 = Risk-Neutral EV · 2.25 = Empirical Kahneman–Tversky · 3.00 = High-Stakes Stage</span>
+      </div>
+      <div class="grid-2" id="prospectGrid"></div>
+    </section>
+  </main>
+
+  <script src="../shared/engine.js"></script>
+  <script>
+    (function () {
+      const E = window.IWillDraftEngine;
+
+      const TEAM_DATA = {
+        C9: {
+          name: 'Cloud9',
+          games: 34,
+          phases: [
+            { id: 'P1', name: 'P1 · Lvl 1–3 Setup', window: '0:00–3:30', epa: +1.8, sr: 62, li: 0.72, n: 34, metrics: [['First-Clear Tempo Δ', '+4.2s'], ['Lv1 Vision Control', '64.7%'], ['First Blood Share', '58.8%'], ['Gold Δ @ 3:30', '+145g']] },
+            { id: 'P2', name: 'P2 · Lane-to-Grubs', window: '3:30–8:00', epa: +2.6, sr: 65, li: 0.94, n: 34, metrics: [['Voidgrubs Share', '61.8%'], ['Bot/Mid Wave Prio', '67.6%'], ['Recall Sync Rate', '70.6%'], ['Gold Δ @ 8:00', '+490g']] },
+            { id: 'P3', name: 'P3 · Plates & Herald', window: '8:00–14:00', epa: +2.1, sr: 59, li: 1.15, n: 34, metrics: [['Plate Diff @ 14m', '+1.4'], ['Rift Herald Share', '55.9%'], ['First Tower Rate', '64.7%'], ['Gold Δ @ 14:00', '+1,120g']] },
+            { id: 'P4', name: 'P4 · Mid Setup', window: '14:00–22:00', epa: -2.4, sr: 41, li: 1.48, n: 34, metrics: [['-60s Objective Setup', '38.2%'], ['Dragon 2–3 Share', '44.1%'], ['Side-Wave Leak Δ', '-310g'], ['Isolated Deaths/G', '1.65']] },
+            { id: 'P5', name: 'P5 · Baron / Soul', window: '22:00–30:00', epa: -1.5, sr: 46, li: 1.92, n: 31, metrics: [['Baron Conversion', '48.4%'], ['50/50 Flip Rate', '32.3%'], ['Fight ΔWP/Engage', '-1.9%'], ['Soul Point Hold', '51.6%']] },
+            { id: 'P6', name: 'P6 · Closing / Elder', window: '30:00+', epa: +0.9, sr: 55, li: 2.35, n: 18, metrics: [['Baron Siege Win%', '72.2%'], ['Elder Control', '55.6%'], ['+3k Lead Close%', '77.8%'], ['Avg Close Δ', '-2m 10s']] }
+          ],
+          units: [
+            { player: 'Blaber', role: 'JGL', unitEpa: +3.4, restEpa: -0.9, sr: 64 },
+            { player: 'Loki', role: 'MID', unitEpa: +2.1, restEpa: +0.4, sr: 59 },
+            { player: 'Thanatos', role: 'TOP', unitEpa: +1.6, restEpa: +0.9, sr: 56 },
+            { player: 'Zven', role: 'BOT', unitEpa: -0.8, restEpa: +3.3, sr: 47 },
+            { player: 'Vulcan', role: 'SUP', unitEpa: -1.9, restEpa: +4.4, sr: 42 }
+          ],
+          decisions: [
+            { title: 'Baron 50/50 Flip (+3.5k Ahead)', phase: 'P5 · 24:00', pSuccess: 0.48, gainWP: +14.0, lossWP: -26.0, obsRate: '38%', n: 13 },
+            { title: '3rd Dragon Contest (-2.5k Behind)', phase: 'P4 · 19:30', pSuccess: 0.34, gainWP: +18.5, lossWP: -16.0, obsRate: '61%', n: 18 },
+            { title: 'G1 Comfort Burn vs. G4 Hold (Fearless)', phase: 'Draft · Bo5', pSuccess: 0.62, gainWP: +8.5, lossWP: -11.0, obsRate: '74%', n: 19 },
+            { title: '6-Grub Cross-Map Trade for Drk 1', phase: 'P2 · 6:40', pSuccess: 0.71, gainWP: +5.2, lossWP: -4.8, obsRate: '56%', n: 25 }
+          ]
+        },
+        FLY: {
+          name: 'FlyQuest',
+          games: 38,
+          phases: [
+            { id: 'P1', name: 'P1 · Lvl 1–3 Setup', window: '0:00–3:30', epa: +1.1, sr: 58, li: 0.72, n: 38, metrics: [['First-Clear Tempo Δ', '+2.1s'], ['Lv1 Vision Control', '68.4%'], ['First Blood Share', '52.6%'], ['Gold Δ @ 3:30', '+95g']] },
+            { id: 'P2', name: 'P2 · Lane-to-Grubs', window: '3:30–8:00', epa: +0.6, sr: 53, li: 0.94, n: 38, metrics: [['Voidgrubs Share', '50.0%'], ['Bot/Mid Wave Prio', '55.3%'], ['Recall Sync Rate', '63.2%'], ['Gold Δ @ 8:00', '+180g']] },
+            { id: 'P3', name: 'P3 · Plates & Herald', window: '8:00–14:00', epa: -0.5, sr: 47, li: 1.15, n: 38, metrics: [['Plate Diff @ 14m', '-0.4'], ['Rift Herald Share', '52.6%'], ['First Tower Rate', '47.4%'], ['Gold Δ @ 14:00', '-120g']] },
+            { id: 'P4', name: 'P4 · Mid Setup', window: '14:00–22:00', epa: +3.8, sr: 71, li: 1.48, n: 38, metrics: [['-60s Objective Setup', '73.7%'], ['Dragon 2–3 Share', '68.4%'], ['Side-Wave Leak Δ', '+410g'], ['Isolated Deaths/G', '0.84']] },
+            { id: 'P5', name: 'P5 · Baron / Soul', window: '22:00–30:00', epa: +2.9, sr: 66, li: 1.92, n: 35, metrics: [['Baron Conversion', '68.6%'], ['50/50 Flip Rate', '17.1%'], ['Fight ΔWP/Engage', '+3.1%'], ['Soul Point Hold', '71.4%']] },
+            { id: 'P6', name: 'P6 · Closing / Elder', window: '30:00+', epa: +1.7, sr: 62, li: 2.35, n: 21, metrics: [['Baron Siege Win%', '81.0%'], ['Elder Control', '61.9%'], ['+3k Lead Close%', '85.7%'], ['Avg Close Δ', '-1m 40s']] }
+          ],
+          units: [
+            { player: 'Inspired', role: 'JGL', unitEpa: +4.1, restEpa: +2.2, sr: 71 },
+            { player: 'Busio', role: 'SUP', unitEpa: +2.8, restEpa: +3.5, sr: 66 },
+            { player: 'Massu', role: 'BOT', unitEpa: +2.4, restEpa: +3.9, sr: 63 },
+            { player: 'Quad', role: 'MID', unitEpa: -0.4, restEpa: +6.7, sr: 49 },
+            { player: 'Bwipo', role: 'TOP', unitEpa: -1.6, restEpa: +7.9, sr: 44 }
+          ],
+          decisions: [
+            { title: 'Baron 50/50 Flip (+3.5k Ahead)', phase: 'P5 · 24:00', pSuccess: 0.52, gainWP: +14.0, lossWP: -26.0, obsRate: '16%', n: 19 },
+            { title: '3rd Dragon Contest (-2.5k Behind)', phase: 'P4 · 19:30', pSuccess: 0.44, gainWP: +18.5, lossWP: -16.0, obsRate: '53%', n: 15 },
+            { title: 'G1 Comfort Burn vs. G4 Hold (Fearless)', phase: 'Draft · Bo5', pSuccess: 0.58, gainWP: +8.5, lossWP: -11.0, obsRate: '42%', n: 19 },
+            { title: '6-Grub Cross-Map Trade for Drk 1', phase: 'P2 · 6:40', pSuccess: 0.68, gainWP: +5.2, lossWP: -4.8, obsRate: '68%', n: 28 }
+          ]
+        },
+        TL: {
+          name: 'Team Liquid',
+          games: 32,
+          phases: [
+            { id: 'P1', name: 'P1 · Lvl 1–3 Setup', window: '0:00–3:30', epa: +0.4, sr: 53, li: 0.72, n: 32, metrics: [['First-Clear Tempo Δ', '+0.8s'], ['Lv1 Vision Control', '56.3%'], ['First Blood Share', '50.0%'], ['Gold Δ @ 3:30', '+40g']] },
+            { id: 'P2', name: 'P2 · Lane-to-Grubs', window: '3:30–8:00', epa: +1.5, sr: 59, li: 0.94, n: 32, metrics: [['Voidgrubs Share', '59.4%'], ['Bot/Mid Wave Prio', '56.3%'], ['Recall Sync Rate', '62.5%'], ['Gold Δ @ 8:00', '+310g']] },
+            { id: 'P3', name: 'P3 · Plates & Herald', window: '8:00–14:00', epa: +1.9, sr: 63, li: 1.15, n: 32, metrics: [['Plate Diff @ 14m', '+1.1'], ['Rift Herald Share', '62.5%'], ['First Tower Rate', '59.4%'], ['Gold Δ @ 14:00', '+740g']] },
+            { id: 'P4', name: 'P4 · Mid Setup', window: '14:00–22:00', epa: +0.8, sr: 54, li: 1.48, n: 32, metrics: [['-60s Objective Setup', '56.3%'], ['Dragon 2–3 Share', '53.1%'], ['Side-Wave Leak Δ', '+95g'], ['Isolated Deaths/G', '1.12']] },
+            { id: 'P5', name: 'P5 · Baron / Soul', window: '22:00–30:00', epa: -1.2, sr: 44, li: 1.92, n: 29, metrics: [['Baron Conversion', '48.3%'], ['50/50 Flip Rate', '27.6%'], ['Fight ΔWP/Engage', '-1.4%'], ['Soul Point Hold', '48.3%']] },
+            { id: 'P6', name: 'P6 · Closing / Elder', window: '30:00+', epa: -0.6, sr: 47, li: 2.35, n: 19, metrics: [['Baron Siege Win%', '63.2%'], ['Elder Control', '47.4%'], ['+3k Lead Close%', '68.4%'], ['Avg Close Δ', '+1m 15s']] }
+          ],
+          units: [
+            { player: 'Yeon', role: 'BOT', unitEpa: +3.1, restEpa: -0.3, sr: 63 },
+            { player: 'CoreJJ', role: 'SUP', unitEpa: +1.7, restEpa: +1.1, sr: 58 },
+            { player: 'Impact', role: 'TOP', unitEpa: +0.9, restEpa: +1.9, sr: 54 },
+            { player: 'UmTi', role: 'JGL', unitEpa: -1.4, restEpa: +4.2, sr: 45 },
+            { player: 'APA', role: 'MID', unitEpa: -1.5, restEpa: +4.3, sr: 44 }
+          ],
+          decisions: [
+            { title: 'Baron 50/50 Flip (+3.5k Ahead)', phase: 'P5 · 24:00', pSuccess: 0.46, gainWP: +14.0, lossWP: -26.0, obsRate: '31%', n: 16 },
+            { title: '3rd Dragon Contest (-2.5k Behind)', phase: 'P4 · 19:30', pSuccess: 0.39, gainWP: +18.5, lossWP: -16.0, obsRate: '50%', n: 14 },
+            { title: 'G1 Comfort Burn vs. G4 Hold (Fearless)', phase: 'Draft · Bo5', pSuccess: 0.60, gainWP: +8.5, lossWP: -11.0, obsRate: '63%', n: 16 },
+            { title: '6-Grub Cross-Map Trade for Drk 1', phase: 'P2 · 6:40', pSuccess: 0.72, gainWP: +5.2, lossWP: -4.8, obsRate: '64%', n: 22 }
+          ]
+        }
+      };
+
+      const state = { team: 'C9', game: 1, selectedPhase: 'P4', lambda: 2.25 };
+
+      function fmtSign(n, suffix) {
+        return (n > 0 ? '+' : '') + n.toFixed(1) + (suffix || '');
+      }
+
+      function render() {
+        const team = TEAM_DATA[state.team];
+        const phases = team.phases.map(function (p) { return E.adjustPhaseForFearless(p, state.game); });
+        const lockedCount = E.getLockedCount(state.game);
+
+        // KPIs
+        const earlyEpa = phases.slice(0, 3).reduce(function (s, p) { return s + p.adjEpa; }, 0);
+        const lateEpa = phases.slice(3).reduce(function (s, p) { return s + p.adjEpa; }, 0);
+        const handoffBI = E.computeBetrayalIndex(earlyEpa, lateEpa);
+        const avgSr = Math.round(phases.reduce(function (s, p) { return s + p.adjSr; }, 0) / phases.length);
+
+        document.getElementById('kpiRow').innerHTML = [
+          { label: 'Early EPA (P1–P3)', val: fmtSign(earlyEpa, '%'), cls: earlyEpa >= 0 ? 'pos' : 'neg', sub: '0:00–14:00 cumulative ΔWP' },
+          { label: 'Mid/Late EPA (P4–P6)', val: fmtSign(lateEpa, '%'), cls: lateEpa >= 0 ? 'pos' : 'neg', sub: '14:00+ cumulative ΔWP' },
+          { label: 'Phase Betrayal Index', val: fmtSign(handoffBI, ''), cls: Math.abs(handoffBI) > 4 ? 'warn' : 'pos', sub: handoffBI > 0 ? 'Early leads leaked post-14m' : 'Late phases recover early deficit' },
+          { label: 'Avg Phase Success Rate', val: avgSr + '%', cls: avgSr >= 55 ? 'pos' : 'warn', sub: 'Fearless G' + state.game + ' (' + lockedCount + ' locked)' }
+        ].map(function (k) {
+          return '<div class="kpi"><div class="kpi-label">' + k.label + '</div><div class="kpi-val ' + k.cls + '">' + k.val + '</div><div class="kpi-sub">' + k.sub + '</div></div>';
+        }).join('');
+
+        document.getElementById('fearlessBadge').textContent = 'G' + state.game + ' · ' + lockedCount + ' Locked · Volatility ×' + (1 + (state.game - 1) * 0.08).toFixed(2);
+
+        // Phase Table
+        document.getElementById('phaseTableBody').innerHTML = phases.map(function (p) {
+          const width = Math.min(48, Math.abs(p.adjEpa) * 9);
+          const left = p.adjEpa >= 0 ? 50 : 50 - width;
+          const color = p.adjEpa >= 0 ? 'var(--green)' : 'var(--red)';
+          return '<tr class="selectable" data-phase="' + p.id + '" aria-selected="' + (p.id === state.selectedPhase) + '">' +
+            '<td><strong>' + p.name + '</strong><div class="mono muted" style="font-size:0.74rem;">' + p.window + '</div></td>' +
+            '<td class="mono ' + (p.adjEpa >= 0 ? 'pos' : 'neg') + '">' + fmtSign(p.adjEpa, '%') + '</td>' +
+            '<td class="mono">' + p.adjSr + '%</td>' +
+            '<td class="mono muted">' + p.adjLi.toFixed(2) + '</td>' +
+            '<td class="mono muted">' + p.n + '</td>' +
+            '<td><div class="bar-track"><div class="bar-mid"></div><div class="bar-fill" style="left:' + left + '%;width:' + width + '%;background:' + color + ';"></div></div></td>' +
+          '</tr>';
+        }).join('');
+
+        // Inspector
+        const active = phases.find(function (p) { return p.id === state.selectedPhase; }) || phases[0];
+        document.getElementById('phaseInspector').innerHTML =
+          '<div class="card-title"><span>' + active.name + '</span><span class="pill ' + (active.adjEpa >= 0 ? 'pos' : 'neg') + '">' + fmtSign(active.adjEpa, '% EPA') + '</span></div>' +
+          '<div class="stat-list">' +
+            '<div class="stat-row"><span class="muted">Time Window</span><span class="mono">' + active.window + '</span></div>' +
+            '<div class="stat-row"><span class="muted">Success Rate (EPA &gt; 0)</span><span class="mono">' + active.adjSr + '% (n=' + active.n + ')</span></div>' +
+            '<div class="stat-row"><span class="muted">Fearless Leverage Index</span><span class="mono">' + active.adjLi.toFixed(2) + '×</span></div>' +
+            active.metrics.map(function (m) {
+              return '<div class="stat-row"><span class="muted">' + m[0] + '</span><span class="mono"><strong>' + m[1] + '</strong></span></div>';
+            }).join('') +
+          '</div>';
+
+        // Unit Betrayal
+        const units = team.units.map(function (u) {
+          const factor = 1 + (state.game - 1) * 0.06;
+          const uEpa = Number((u.unitEpa * factor).toFixed(2));
+          const rEpa = Number((u.restEpa * factor).toFixed(2));
+          return Object.assign({}, u, { uEpa: uEpa, rEpa: rEpa, bi: E.computeBetrayalIndex(uEpa, rEpa) });
+        }).sort(function (a, b) { return b.bi - a.bi; });
+
+        document.getElementById('unitBetrayalBody').innerHTML = units.map(function (u) {
+          const pillCls = u.bi >= 3.0 ? 'warn' : (u.bi <= -3.0 ? 'neg' : 'neutral');
+          return '<tr>' +
+            '<td><strong>' + u.player + '</strong> <span class="mono muted">' + u.role + '</span></td>' +
+            '<td class="mono ' + (u.uEpa >= 0 ? 'pos' : 'neg') + '">' + fmtSign(u.uEpa, '%') + '</td>' +
+            '<td class="mono ' + (u.rEpa >= 0 ? 'pos' : 'neg') + '">' + fmtSign(u.rEpa, '%') + '</td>' +
+            '<td><span class="pill ' + pillCls + '">' + fmtSign(u.bi, '') + '</span></td>' +
+            '<td class="mono">' + u.sr + '%</td>' +
+          '</tr>';
+        }).join('');
+
+        // Phase Handoff Betrayal
+        const pairs = [
+          ['P1–P2 (0–8m) → P4 (Mid Setup)', phases[0].adjEpa + phases[1].adjEpa, phases[3].adjEpa],
+          ['P3 (Plates) → P5 (Baron/Soul)', phases[2].adjEpa, phases[4].adjEpa],
+          ['P4 (Mid Setup) → P6 (Closing)', phases[3].adjEpa, phases[5].adjEpa]
+        ];
+        document.getElementById('phaseHandoffList').innerHTML = pairs.map(function (row) {
+          const bi = E.computeBetrayalIndex(row[1], row[2]);
+          const cls = bi > 3 ? 'warn' : (bi < -3 ? 'pos' : 'neutral');
+          return '<div class="stat-row"><div><div><strong>' + row[0] + '</strong></div><div class="mono muted" style="font-size:0.74rem;">' + fmtSign(row[1], '%') + ' → ' + fmtSign(row[2], '%') + '</div></div><span class="pill ' + cls + '">BI ' + fmtSign(bi, '') + '</span></div>';
+        }).join('');
+
+        // Prospect Theory Decisions
+        document.getElementById('lambdaVal').textContent = state.lambda.toFixed(2);
+        document.getElementById('prospectGrid').innerHTML = team.decisions.map(function (d) {
+          const res = E.evaluateProspectDecision(d.pSuccess, d.gainWP, d.lossWP, { lambda: state.lambda });
+          const evCls = res.ev >= 0 ? 'pos' : 'neg';
+          const ptCls = res.uPT >= 0 ? 'pos' : 'neg';
+          const mismatch = (res.ev >= 0 && res.uPT < 0) || (res.ev < 0 && res.uPT >= 0);
+          return '<div class="pt-card">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+              '<div><strong>' + d.title + '</strong><div class="mono muted" style="font-size:0.74rem;">' + d.phase + ' · Obs Take: ' + d.obsRate + ' (n=' + d.n + ')</div></div>' +
+              '<span class="pill ' + (mismatch ? 'warn' : 'neutral') + '">' + (mismatch ? 'Bias Divergence' : 'Aligned') + '</span>' +
+            '</div>' +
+            '<div class="pt-grid">' +
+              '<div class="pt-cell"><div class="lbl">p / w(p)</div><div class="val">' + Math.round(d.pSuccess * 100) + '% / ' + res.wSuccess + '%</div></div>' +
+              '<div class="pt-cell"><div class="lbl">Risk-Neutral EV</div><div class="val ' + evCls + '">' + fmtSign(res.ev, '%') + '</div></div>' +
+              '<div class="pt-cell"><div class="lbl">Prospect U_PT</div><div class="val ' + ptCls + '">' + fmtSign(res.uPT, '') + '</div></div>' +
+            '</div>' +
+            '<div class="mono muted" style="font-size:0.74rem;">Payoff: +' + d.gainWP.toFixed(1) + '% / ' + d.lossWP.toFixed(1) + '% ΔWP · Risk-Bias Gap: ' + fmtSign(res.biasGap, '') + '</div>' +
+          '</div>';
+        }).join('');
+      }
+
+      // Events
+      document.getElementById('teamSelect').addEventListener('change', function (e) {
+        state.team = e.target.value;
+        render();
+      });
+      document.querySelectorAll('.seg button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          state.game = Number(btn.dataset.game);
+          document.querySelectorAll('.seg button').forEach(function (b) {
+            b.setAttribute('aria-pressed', String(b === btn));
+          });
+          render();
+        });
+      });
+      document.getElementById('phaseTableBody').addEventListener('click', function (e) {
+        const tr = e.target.closest('tr[data-phase]');
+        if (!tr) return;
+        state.selectedPhase = tr.dataset.phase;
+        render();
+      });
+      document.getElementById('lambdaSlider').addEventListener('input', function (e) {
+        state.lambda = Number(e.target.value);
+        render();
+      });
+
+      // Tabs
+      const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          tabs.forEach(function (t) {
+            const active = t === tab;
+            t.setAttribute('aria-selected', String(active));
+            document.getElementById(t.getAttribute('aria-controls')).hidden = !active;
+          });
+        });
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>

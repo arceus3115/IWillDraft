@@ -361,15 +361,26 @@
     <a href="../03-fearless-pool-cliff-planner/index.html">03 Fearless Cliffs</a>
     <a href="../04-rift-spatial-pathing-map/index.html">04 Early Pathing</a>
     <a href="../05-playbook-huddle-stage-binder/index.html">05 Match Day</a>
+    <a href="../06-game-phase-epa-betrayal/index.html">06 Phase EPA</a>
+    <a href="../07-patch-equilibrium-shift/index.html">07 Patch Shift</a>
   </nav>
 
   <div class="shell">
     <header class="header">
       <h1>Patch 26.23 Risers</h1>
-      <select id="oppSelect" aria-label="Opponent">
-        <option value="fly">vs FlyQuest</option>
-        <option value="tl">vs Team Liquid</option>
-      </select>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="gameSelect" aria-label="Fearless game">
+          <option value="1">Fearless G1 (0 locked)</option>
+          <option value="2">Fearless G2 (10 locked)</option>
+          <option value="3">Fearless G3 (20 locked)</option>
+          <option value="4">Fearless G4 (30 locked)</option>
+          <option value="5">Fearless G5 (40 locked)</option>
+        </select>
+        <select id="oppSelect" aria-label="Opponent">
+          <option value="fly">vs FlyQuest</option>
+          <option value="tl">vs Team Liquid</option>
+        </select>
+      </div>
     </header>
 
     <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Patch riser views" id="tablist">
@@ -398,9 +409,9 @@
                   <tr>
                     <th scope="col">Champion</th>
                     <th scope="col">Role</th>
-                    <th scope="col">Shift</th>
-                    <th scope="col">Key Buff</th>
-                    <th scope="col">Scrim</th>
+                    <th scope="col">Shift (σ)</th>
+                    <th scope="col">ΔEPA / Pool</th>
+                    <th scope="col">Track</th>
                   </tr>
                 </thead>
                 <tbody id="universeTableBody"></tbody>
@@ -448,97 +459,86 @@
     </div>
   </div>
 
+  <script src="../shared/engine.js"></script>
   <script>
+    const E = window.IWillDraftEngine;
     const CHAMPIONS = [
       {
-        id: 'azir', name: 'Azir', role: 'MID', zDelta: '+1.84σ',
-        lever: 'W AP ratio up + higher 20:00 Baron DPS',
-        breakpoint: 'Lv9 W+Q clears casters 1.4s faster; +14.2% Baron DPS at 20:00.',
+        id: 'azir', name: 'Azir', role: 'MID', zDelta: '+1.84σ', epaDelta: '+2.4%', sampleN: 68,
         lckPres: '74%', lcsPres: '28%', gap: '+46%',
         c9: { player: 'Loki', games: 14, wr: '71%', gd15: '+480g' },
         opp: {
           fly: { player: 'Quad', games: 19, wr: '68%', gd15: '+390g', signal: 'THREAT' },
           tl: { player: 'APA', games: 4, wr: '25%', gd15: '-310g', signal: 'SLEEPER' }
         },
-        scrimNote: 'Test B2/B3 Azir blind for Loki; check G1 ban priority vs Quad.'
+        empSummary: 'ΔWR +4.1% (n=68) · Baron-phase EPA +3.2% · LCK P1 share 31%'
       },
       {
-        id: 'galio', name: 'Galio', role: 'MID', zDelta: '+1.62σ',
-        lever: 'Passive CD refund + Hollow Radiance -100g',
-        breakpoint: '1-wave Q+Passive clear on first base (850g).',
+        id: 'galio', name: 'Galio', role: 'MID', zDelta: '+1.62σ', epaDelta: '+1.9%', sampleN: 54,
         lckPres: '68%', lcsPres: '31%', gap: '+37%',
         c9: { player: 'Loki', games: 8, wr: '63%', gd15: '+190g' },
         opp: {
           fly: { player: 'Quad', games: 12, wr: '75%', gd15: '+260g', signal: 'THREAT' },
           tl: { player: 'APA', games: 9, wr: '56%', gd15: '+110g', signal: 'THREAT' }
         },
-        scrimNote: 'Test Vi + Galio denial on Red R1/R2.'
+        empSummary: 'ΔWR +3.4% (n=54) · 14m–22m Setup EPA +2.8% · R1/R2 pair rate 44%'
       },
       {
-        id: 'gnar', name: 'Gnar', role: 'TOP', zDelta: '+1.49σ',
-        lever: '+3 base AD + early Q CD -1.5s',
-        breakpoint: 'Lv20 Top Quest adds +610 Mega HP and +19 Armor for Baron fights.',
+        id: 'gnar', name: 'Gnar', role: 'TOP', zDelta: '+1.49σ', epaDelta: '+1.7%', sampleN: 61,
         lckPres: '61%', lcsPres: '24%', gap: '+37%',
         c9: { player: 'Thanatos', games: 16, wr: '69%', gd15: '+520g' },
         opp: {
           fly: { player: 'Bwipo', games: 11, wr: '64%', gd15: '+210g', signal: 'SLEEPER' },
           tl: { player: 'Impact', games: 22, wr: '68%', gd15: '+290g', signal: 'THREAT' }
         },
-        scrimNote: 'Prioritize Thanatos Gnar into blind tanks; strong G2/G3 stabilizer.'
+        empSummary: 'ΔWR +2.9% (n=61) · Top Plate Δ +0.9 · Blind-pick SR 64%'
       },
       {
-        id: 'ksante', name: "K'Sante", role: 'TOP', zDelta: '+1.35σ',
-        lever: 'E shield buff + higher W monster cap',
-        breakpoint: '+9.5% faster Grub/Scuttle skirmish TTK after Chain Vest + Negatron.',
+        id: 'ksante', name: "K'Sante", role: 'TOP', zDelta: '+1.35σ', epaDelta: '+1.5%', sampleN: 79,
         lckPres: '81%', lcsPres: '49%', gap: '+32%',
         c9: { player: 'Thanatos', games: 21, wr: '71%', gd15: '+340g' },
         opp: {
           fly: { player: 'Bwipo', games: 7, wr: '43%', gd15: '-180g', signal: 'SLEEPER' },
           tl: { player: 'Impact', games: 18, wr: '67%', gd15: '+195g', signal: 'THREAT' }
         },
-        scrimNote: 'Asymmetric edge vs FlyQuest: high Thanatos comfort while Bwipo avoids it P1.'
+        empSummary: 'ΔWR +2.6% (n=79) · C9 vs FLY player WR Δ +28% · Grub skirmish SR 67%'
       },
       {
-        id: 'sejuani', name: 'Sejuani', role: 'JGL', zDelta: '+1.28σ',
-        lever: 'Camp HP -4% speeds first clear by 4.5s',
-        breakpoint: '3:14 leashless Scuttle arrival with 1 Smite banked.',
+        id: 'sejuani', name: 'Sejuani', role: 'JGL', zDelta: '+1.28σ', epaDelta: '+1.4%', sampleN: 49,
         lckPres: '54%', lcsPres: '19%', gap: '+35%',
         c9: { player: 'Blaber', games: 13, wr: '69%', gd15: '+275g' },
         opp: {
           fly: { player: 'Inspired', games: 17, wr: '76%', gd15: '+410g', signal: 'THREAT' },
           tl: { player: 'Umti', games: 15, wr: '60%', gd15: '+140g', signal: 'THREAT' }
         },
-        scrimNote: 'Track Sejuani + melee solo pairings in G3+ once Vi/Skarner are locked.'
+        empSummary: 'ΔWR +2.2% (n=49) · First-clear Δ -4.5s · 3:30 Scuttle prio 69%'
       },
       {
-        id: 'jinx', name: 'Jinx', role: 'BOT', zDelta: '+1.41σ',
-        lever: 'Crit core -150g + 7th-item Bot ceiling',
-        breakpoint: '2-item + T2 boots spike arrives ~55s earlier (17:40 avg).',
+        id: 'jinx', name: 'Jinx', role: 'BOT', zDelta: '+1.41σ', epaDelta: '+1.8%', sampleN: 57,
         lckPres: '58%', lcsPres: '33%', gap: '+25%',
         c9: { player: 'Zven', games: 15, wr: '73%', gd15: '+310g' },
         opp: {
           fly: { player: 'Massu', games: 11, wr: '64%', gd15: '+165g', signal: 'SLEEPER' },
           tl: { player: 'Yeon', games: 14, wr: '71%', gd15: '+380g', signal: 'THREAT' }
         },
-        scrimNote: 'Test Jinx + Braum in G2/G3 after Kalista/Varus leave the pool.'
+        empSummary: 'ΔWR +3.1% (n=57) · 2-item timestamp Δ -55s · 22m+ Fight EPA +2.9%'
       },
       {
-        id: 'rell', name: 'Rell', role: 'SUP', zDelta: '+1.19σ',
-        lever: 'W mount MS +5 into river chokes',
-        breakpoint: 'Flash+W→R syncs with 5:00 and 10:20 objective timers.',
+        id: 'rell', name: 'Rell', role: 'SUP', zDelta: '+1.19σ', epaDelta: '+1.2%', sampleN: 64,
         lckPres: '66%', lcsPres: '44%', gap: '+22%',
         c9: { player: 'Vulcan', games: 18, wr: '67%', gd15: '+220g' },
         opp: {
           fly: { player: 'Busio', games: 16, wr: '69%', gd15: '+240g', signal: 'THREAT' },
           tl: { player: 'CoreJJ', games: 20, wr: '70%', gd15: '+260g', signal: 'THREAT' }
         },
-        scrimNote: 'High-value G1/G2 engage trade into immobile carries.'
+        empSummary: 'ΔWR +1.9% (n=64) · Objective setup SR 66% · G1–G2 presence 71%'
       }
     ];
 
     const state = {
       step: 0,
       opp: 'fly',
+      game: 1,
       roleFilter: 'ALL',
       sigFilter: 'ALL',
       selectedId: 'azir',
@@ -583,15 +583,17 @@
 
     function renderUniverseTable() {
       const tbody = document.getElementById('universeTableBody');
+      const lockedSet = E.getLockedChampions(state.game);
       const rows = CHAMPIONS.filter(c => state.roleFilter === 'ALL' || c.role === state.roleFilter);
       tbody.innerHTML = rows.map(c => {
         const pinned = state.pinned.has(c.id);
+        const locked = lockedSet.has(c.name);
         return `
-          <tr class="${c.id === state.selectedId ? 'selected' : ''}" data-id="${c.id}">
-            <th scope="row">${c.name}</th>
+          <tr class="${c.id === state.selectedId ? 'selected' : ''}" data-id="${c.id}" style="${locked ? 'opacity:0.48' : ''}">
+            <th scope="row">${c.name} ${locked ? '<span class="tag threat" style="margin-inline-start:4px">Locked</span>' : ''}</th>
             <td class="mono muted">${c.role}</td>
             <td><span class="tag up">${c.zDelta}</span></td>
-            <td>${c.lever}</td>
+            <td class="mono">${c.epaDelta} EPA · n=${c.sampleN}</td>
             <td><button type="button" class="${pinned ? 'primary' : ''}" data-pin="${c.id}">${pinned ? 'Pinned' : '+ Pin'}</button></td>
           </tr>
         `;
@@ -600,28 +602,32 @@
 
     function renderComfortMatrix() {
       const oppLabel = state.opp === 'fly' ? 'FLY' : 'TL';
+      const lockedSet = E.getLockedChampions(state.game);
       const grid = document.getElementById('comfortMatrixGrid');
       const items = CHAMPIONS.filter(c => state.sigFilter === 'ALL' || c.opp[state.opp].signal === state.sigFilter);
       grid.innerHTML = items.map(c => {
         const o = c.opp[state.opp];
         const isThreat = o.signal === 'THREAT';
+        const locked = lockedSet.has(c.name);
+        const c9WrNum = parseInt(c.c9.wr, 10) || 50;
         return `
-          <div class="tile ${c.id === state.selectedId ? 'selected' : ''}" data-id="${c.id}">
+          <div class="tile ${c.id === state.selectedId ? 'selected' : ''}" data-id="${c.id}" style="${locked ? 'opacity:0.48' : ''}">
             <div class="tile-head">
               <strong>${c.name} <span class="mono muted">${c.role}</span></strong>
-              <span class="tag ${isThreat ? 'threat' : 'edge'}">${isThreat ? 'Threat' : 'C9 Edge'}</span>
+              <span class="tag ${locked ? 'threat' : isThreat ? 'threat' : 'edge'}">${locked ? 'Fearless Locked' : isThreat ? 'Threat' : 'C9 Edge'}</span>
             </div>
-            <div style="font-size:0.8rem"><strong>C9 ${c.c9.player}</strong> · ${c.c9.wr} · <span class="mono">${c.c9.gd15}</span></div>
-            <div class="bar"><div style="width:${Math.min(100, c.c9.games * 4.5)}%"></div></div>
-            <div class="muted" style="font-size:0.8rem"><strong>${oppLabel} ${o.player}</strong> · ${o.wr} · <span class="mono">${o.gd15}</span></div>
+            <div style="font-size:0.8rem"><strong>C9 ${c.c9.player}</strong> · ${c.c9.wr} (n=${c.c9.games}) · <span class="mono">${c.c9.gd15}</span></div>
+            <div class="bar" title="C9 Win Rate ${c.c9.wr}"><div style="width:${c9WrNum}%"></div></div>
+            <div class="muted" style="font-size:0.8rem"><strong>${oppLabel} ${o.player}</strong> · ${o.wr} (n=${o.games}) · <span class="mono">${o.gd15}</span></div>
           </div>
         `;
       }).join('');
     }
 
     function renderLckLag() {
+      const lockedSet = E.getLockedChampions(state.game);
       document.getElementById('lckLagBody').innerHTML = CHAMPIONS.map(c => `
-        <tr class="${c.id === state.selectedId ? 'selected' : ''}" data-id="${c.id}">
+        <tr class="${c.id === state.selectedId ? 'selected' : ''}" data-id="${c.id}" style="${lockedSet.has(c.name) ? 'opacity:0.48' : ''}">
           <th scope="row">${c.name} <span class="mono muted">${c.role}</span></th>
           <td class="mono">${c.lckPres}</td>
           <td class="mono">${c.lcsPres}</td>
@@ -632,16 +638,18 @@
 
     function renderScrimBrief() {
       const wrap = document.getElementById('scrimBriefList');
+      const lockedSet = E.getLockedChampions(state.game);
       const list = CHAMPIONS.filter(c => state.pinned.has(c.id));
       if (!list.length) {
         wrap.innerHTML = `<p class="muted">No champions pinned.</p>`;
         return;
       }
       wrap.innerHTML = list.map(c => `
-        <div class="scrim-item">
+        <div class="scrim-item" style="${lockedSet.has(c.name) ? 'opacity:0.55' : ''}">
           <div>
             <strong>${c.name}</strong> <span class="tag up" style="margin-inline-start:6px">${c.zDelta}</span>
-            <p class="muted" style="margin-block-start:4px">${c.scrimNote}</p>
+            ${lockedSet.has(c.name) ? '<span class="tag threat" style="margin-inline-start:6px">Locked G' + state.game + '</span>' : ''}
+            <p class="muted mono" style="margin-block-start:4px;font-size:0.78rem">${c.empSummary}</p>
           </div>
           <button type="button" data-pin="${c.id}">Remove</button>
         </div>
@@ -654,22 +662,22 @@
       const oppTeam = state.opp === 'fly' ? 'FLY' : 'TL';
       const pinned = state.pinned.has(c.id);
       const isThreat = o.signal === 'THREAT';
+      const locked = E.getLockedChampions(state.game).has(c.name);
+      const wrDiff = (parseInt(c.c9.wr, 10) || 0) - (parseInt(o.wr, 10) || 0);
       document.getElementById('inspectorCard').innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-block-end:6px">
           <h2>${c.name}</h2>
-          <span class="tag ${isThreat ? 'threat' : 'edge'}">${isThreat ? 'Threat' : 'C9 Edge'}</span>
+          <span class="tag ${locked ? 'threat' : isThreat ? 'threat' : 'edge'}">${locked ? 'Locked G' + state.game : isThreat ? 'Threat' : 'C9 Edge'}</span>
         </div>
-        <div class="kv"><span>Power Shift</span><span class="tag up">${c.zDelta}</span></div>
+        <div class="kv"><span>Patch Shift / ΔEPA</span><span class="tag up">${c.zDelta} · ${c.epaDelta}</span></div>
+        <div class="kv"><span>Fearless Status</span><span class="mono">${locked ? 'Unavailable (G' + state.game + ')' : 'Legal (G' + state.game + ')'}</span></div>
         <div class="kv"><span>C9 ${c.c9.player}</span><span class="mono">${c.c9.games}g · ${c.c9.wr} · ${c.c9.gd15}</span></div>
         <div class="kv"><span>${oppTeam} ${o.player}</span><span class="mono">${o.games}g · ${o.wr} · ${o.gd15}</span></div>
-        <div class="kv"><span>LCK / LCS</span><span class="mono">${c.lckPres} / ${c.lcsPres}</span></div>
-        <div class="callout">${c.scrimNote}</div>
-        <details>
-          <summary>Breakpoint details</summary>
-          <p>${c.breakpoint}</p>
-        </details>
+        <div class="kv"><span>Player WR Δ (C9 - ${oppTeam})</span><span class="mono">${wrDiff >= 0 ? '+' : ''}${wrDiff}%</span></div>
+        <div class="kv"><span>LCK / LCS Adoption</span><span class="mono">${c.lckPres} / ${c.lcsPres} (${c.gap})</span></div>
+        <div class="callout mono" style="font-size:0.78rem">${c.empSummary}</div>
         <button type="button" class="primary" style="width:100%" data-pin="${c.id}">
-          ${pinned ? 'Pinned to Scrim List' : '+ Pin to Scrim List'}
+          ${pinned ? 'Pinned to Watchlist' : '+ Pin to Watchlist'}
         </button>
       `;
     }
@@ -694,6 +702,10 @@
     });
     document.getElementById('oppSelect').addEventListener('change', e => {
       state.opp = e.target.value;
+      renderAll();
+    });
+    document.getElementById('gameSelect').addEventListener('change', e => {
+      state.game = Number(e.target.value);
       renderAll();
     });
     document.getElementById('rolePills').addEventListener('click', e => {
