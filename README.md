@@ -10,7 +10,15 @@ git config --local core.hooksPath .githooks
 
 The hook checks staged files for credential filenames, common token formats, private keys, and literal `GRID_API_KEY` values. It also checks for whitespace errors and conflict markers. Secret findings show filenames only. The GitHub Actions workflow runs the same secret scan over the checked-out files on pushes and pull requests.
 
-Keep the GRID API key in your shell environment or in an ignored local `.env` file. The [environment template](.env.example) lists the variable, and the [GRID framework setup](grid-framework/README.md#prerequisites) shows how to export it for Go.
+## GRID SDK
+
+The [GRID Go client](https://github.com/arceus3115/grid-framework) is maintained in its own repository. Add it as a dependency from your Go module directory.
+
+```sh
+go get github.com/arceus3115/grid-framework@v0.1.0
+```
+
+Keep `GRID_API_KEY` in your server environment or an ignored local `.env` file. The [environment template](.env.example) lists the variable, and the [SDK setup guide](https://github.com/arceus3115/grid-framework#prerequisites) shows how to export it for Go.
 
 ## Hackathon Requirements 
 ### Macro Scouting & Draft Management System
