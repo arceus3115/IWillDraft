@@ -1,5 +1,17 @@
 # IWillDraft
 
+## Local Git setup
+
+Enable the versioned pre-commit hook from the repository root after cloning:
+
+```sh
+git config --local core.hooksPath .githooks
+```
+
+The hook checks staged files for credential filenames, common token formats, private keys, and literal `GRID_API_KEY` values. It also checks for whitespace errors and conflict markers. Secret findings show filenames only. The GitHub Actions workflow runs the same secret scan over the checked-out files on pushes and pull requests.
+
+Keep the GRID API key in your shell environment or in an ignored local `.env` file. The [environment template](.env.example) lists the variable, and the [GRID framework setup](grid-framework/README.md#prerequisites) shows how to export it for Go.
+
 ## Hackathon Requirements 
 ### Macro Scouting & Draft Management System
 - A competitive League of Legends coaching platform that eliminates spreadsheet chaos, elevates macro strategy, or accelerates pre-match preparation

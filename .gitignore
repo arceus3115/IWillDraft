@@ -26,8 +26,31 @@ profile.cov
 go.work
 go.work.sum
 
-# env file
+# Local environment files and credentials
 .env
+.env.*
+!.env.example
+.envrc
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.aws/
+.ssh/
+.secrets/
+.netrc
+_netrc
+.npmrc.local
+credentials.json
+service-account*.json
+id_rsa
+id_ed25519
+*.key
+*.pem
+*.p12
+*.pfx
+
+# macOS metadata
+.DS_Store
 
 # Editor/IDE
 # .idea/

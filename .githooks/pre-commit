@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+"${0%/*}/check-secrets"
+
+if ! git diff --cached --check >/dev/null; then
+    printf 'Staged whitespace or conflict-marker check failed. Review with git diff --cached --check.\n' >&2
+    exit 1
+fi
