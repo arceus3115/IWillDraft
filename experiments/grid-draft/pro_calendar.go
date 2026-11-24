@@ -19,15 +19,38 @@ type proPatchCalendar struct {
 	Observed  map[string][]proPatchWindow `json:"observed,omitempty"`
 }
 
+func withWorldsSchedule(scheduled map[string][]proPatchWindow) map[string][]proPatchWindow {
+	// Event dates and locked versions come from Riot's Worlds schedules and patch notes.
+	official := []proPatchWindow{
+		{Patch: proPatch{15, 20}, Start: time.Date(2025, 10, 13, 16, 0, 0, 0, time.UTC), End: time.Date(2025, 11, 9, 16, 0, 0, 0, time.UTC)},
+		{Patch: proPatch{16, 20}, Start: time.Date(2026, 10, 15, 7, 0, 0, 0, time.UTC), End: time.Date(2026, 11, 15, 5, 0, 0, 0, time.UTC)},
+	}
+	out := make(map[string][]proPatchWindow, len(scheduled)+1)
+	for competition, windows := range scheduled {
+		out[competition] = windows
+	}
+	worlds := slices.Clone(scheduled[proWorlds])
+	for _, window := range official {
+		if !slices.ContainsFunc(worlds, func(known proPatchWindow) bool {
+			return known.Start.Year() == window.Start.Year()
+		}) {
+			worlds = append(worlds, window)
+		}
+	}
+	slices.SortFunc(worlds, func(a, b proPatchWindow) int { return a.Start.Compare(b.Start) })
+	out[proWorlds] = worlds
+	return out
+}
+
 func readProPatchWindows(path string) (map[string][]proPatchWindow, error) {
 	if path == "" {
 		return nil, nil
 	}
 	windows := map[string][]proPatchWindow{}
 	err := readCSV(path, func(row map[string]string) error {
-		league := row["league"]
-		if !slices.Contains(tierOneLeagues, league) {
-			return fmt.Errorf("unknown tier-one league %q", league)
+		league := proCompetition(row["league"])
+		if !slices.Contains(proCompetitions, league) {
+			return fmt.Errorf("unknown competition %q", league)
 		}
 		patch, err := parseProPatch(row["patch"])
 		if err != nil {
@@ -44,12 +67,15 @@ func readProPatchWindows(path string) (map[string][]proPatchWindow, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, league := range tierOneLeagues {
+	for _, league := range proCompetitions {
 		rows := windows[league]
 		slices.SortFunc(rows, func(a, b proPatchWindow) int { return a.Start.Compare(b.Start) })
 		for i := 1; i < len(rows); i++ {
 			if rows[i].Start.Before(rows[i-1].End) {
 				return nil, fmt.Errorf("%s: overlapping %s windows at %s", path, league, rows[i].Start.Format(time.RFC3339))
+			}
+			if league == proWorlds && rows[i].Start.Year() == rows[i-1].Start.Year() {
+				return nil, fmt.Errorf("%s: provide one locked Worlds window per season", path)
 			}
 		}
 	}
@@ -118,8 +144,8 @@ func (c proPatchCalendar) competitiveUpdates(target proContext) map[string][]int
 			}
 		}
 	}
-	out := make(map[string][]int, len(tierOneLeagues))
-	for _, league := range tierOneLeagues {
+	out := make(map[string][]int, len(proCompetitions))
+	for _, league := range proCompetitions {
 		updates := map[int]bool{target.patch.update: true}
 		addLeague(updates, target.league)
 		addLeague(updates, league)

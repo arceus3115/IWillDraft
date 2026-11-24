@@ -2,16 +2,16 @@
 
 ## Tier-one draft decision support
 
-Supply one local [Oracle’s Elixir yearly CSV](https://drive.google.com/drive/folders/1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH) per season. The importer takes domestic LCS, LCK, LPL, and LEC games from 2025 onward, reconciles the two team rows with the ten player and role rows, and joins games into series. The JSON output shows the dates and patches actually covered in each league and counts discarded games by reason. GRID remains the source for the ordered replay and gameplay analysis below.
+Supply one local Oracle’s Elixir yearly CSV per season. The importer takes domestic LCS, LCK, LPL, and LEC games and Worlds from 2025 onward, reconciles the two team rows with the ten player and role rows, and joins games into series. The JSON output shows the dates and patches covered in each competition and counts discarded games by reason. GRID remains the source for the ordered replay and gameplay analysis below. [Oracle’s Elixir yearly downloads](https://drive.google.com/drive/folders/1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH)
 
 ```sh
 GOWORK=off go run . -pro-csv "$OE_2026_CSV" -pro-year 2026
 GOWORK=off go run . -pro-csv "$OE_2026_CSV" -pro-scenario /path/to/scenario.json
 ```
 
-The backtest refits each league and competitive patch at the start of each UTC week. A series enters training four hours after its last observed game start. Series identity uses the source series key when embedded in the game ID and otherwise uses the league, season, split, team pair, ordered game numbers, and timestamps. Held-out games share their series' cutoff. The report shows Brier loss, log loss, and calibration by league, patch, and whether the league had fewer than 15 preceding games on the target patch. It compares transfer against a team/player/side baseline, a target-league model, and a same-patch model. Each comparison uses the games scored by both models and resamples whole series for intervals. Check coverage alongside each comparison, particularly early in a patch.
+The backtest refits before each held-out series. A prior series enters training four hours after its last observed game start. Series identity uses the source series key when embedded in the game ID and otherwise uses the competition, season, split, team pair, ordered game numbers, and timestamps. The report shows Brier loss, log loss, and calibration by competition, patch, and whether the competition had fewer than 15 preceding games on the target patch. It compares the patch-linked model with independent patch effects, team/player/side, target-competition-only, and same-patch models. Each comparison uses the games scored by both models and resamples whole series for intervals.
 
-Training uses up to 180 days in the same client major, with a 60-day half-life. Patch decay halves the weight every two **competitive** patch steps. For each historical game it counts distinct intervening patches that the game's league or the target league had played or started on their competitive calendars by the training cutoff. It includes the target patch once even when it is a scheduled debut. Same-patch games have zero patch decay. A donor league contributes at most half the greater of the target league's weight and 12. `-pro-patch-resets 26.13,26.19` is an example of an analyst-specified reset. Each reset excludes earlier patches when scoring that patch or later in the same major.
+Evidence weight halves every two **competitive** patch steps within a client major. For each historical game, the model counts distinct intervening patches played or scheduled to have started in its competition or the target competition before the cutoff. It includes the target patch once even on a scheduled debut. Same-patch games receive the same recency weight throughout the patch. Dates determine patch assignment and which series have finished. Games on newer builds are excluded when projecting an older tournament build. A donor competition contributes at most half the greater of the target competition's weight and 12. `-pro-patch-resets 26.13,26.19` illustrates analyst-specified breaks for changes that make earlier observations unsuitable.
 
 ### Competitive patch calendar
 
@@ -29,11 +29,13 @@ LCK,26.7,2026-04-08T08:00:00Z,2026-04-22T08:00:00Z
 
 The dates above illustrate the format. Use verified competitive dates with explicit UTC offsets. Starts are inclusive, ends are exclusive, and windows may overlap across different leagues. Patch labels such as `26.6` and `16.6` resolve to the same version. A recorded game that contradicts a scheduled window is counted in coverage and disables automatic assignment from that window. An untagged game can also inherit a patch when bracketed by matching recorded games in its own league. In a historical backtest, that game enters training only after the patch window is corroborated and its series is available. Games in uncovered gaps are reported as rejected. JSON includes the resolved windows and counts by patch source.
 
-The logistic model jointly estimates map side, first-pick side, and team and player strength alongside champion-by-role effects. Shared champion effects have shrunk league and patch adjustments. Player-champion, allied-pair, and direct lane-matchup terms shrink more heavily. Weighting and penalties are fixed experiment settings. They let the backtest test whether transfer or additional draft context earns its place.
+Use competition `WORLDS` for the tournament. Oracle’s Elixir labels those rows `WLDs`. The importer uses one locked window for each event, with Riot's published tournament dates and patches built in for 2025 and 2026. Supply a calendar window for other seasons. The importer attributes regional qualifiers with verified LPL match URLs to LPL and reports other out-of-window rows and patch conflicts. Across competitions, team and player terms share stable source IDs so a Worlds entrant can carry domestic history into the event. Domestic results alone give limited information about relative team strength between regions. [2025 schedule](https://lolesports.com/en-GB/news/worlds-2025-heads-to-china) · [2025 patch notes](https://www.leagueoflegends.com/en-us/news/game-updates/patch-25-20-notes/) · [2026 schedule](https://lolesports.com/en-GB/news/worlds-2026-primer) · [2026 patch notes](https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-20-notes/)
+
+The logistic model jointly estimates map side, first-pick side, and team and player strength alongside champion-by-role effects. The patch-linked model penalizes changes between adjacent champion-role patch effects. An unseen patch inherits the learned adjustment from the most recent supported patch, and incoming stage games can move that estimate. Sparse chains allow larger changes when several competitive patch steps separate the observations. The independent-patch comparison tests whether this structure improves held-out predictions. Player-champion, allied-pair, and lane-matchup terms remain regularized. These are fixed experiment settings and the patch effects describe observed outcomes under the fitted model.
 
 ### Compare a draft choice
 
-Set nine champion assignments and leave the focus role's champion empty. Use team and player IDs from the CSV, a timestamp with a UTC offset, and the current draft's bans, earlier Fearless locks, and any patch disables in `unavailable`. Supply a legal reference and the alternatives the coach wants to review. When `patch` is omitted, the scenario uses the league's competitive patch window at `as_of`. Specify the competitive patch for a planned matchup outside the covered dates. Map side and first-pick side are independent under First Selection. [Riot’s First Selection rules](https://lolesports.com/en-GB/news/season-start-2026-lol-esports)
+Set nine champion assignments and leave the focus role's champion empty. Use team and player IDs from the CSV, a timestamp with a UTC offset, and the current draft's bans, earlier Fearless locks, and any patch disables in `unavailable`. Supply a legal reference and alternatives. `as_of` controls evidence availability. Optional `match_at` identifies the scheduled match time and defaults to `as_of`. The competition's patch window supplies the version at `match_at` or verifies the explicitly supplied `patch`. Supply the competitive patch for a planned matchup outside the covered dates. Map side and first-pick side are independent under First Selection. [Riot’s First Selection rules](https://lolesports.com/en-GB/news/season-start-2026-lol-esports)
 
 ```json
 {
@@ -72,6 +74,49 @@ Set nine champion assignments and leave the focus role's champion empty. Use tea
 The decision reports probability differences versus the reference for each supported model, with whole-series refits for a conditional sampling interval on the transfer estimate. Feature contributions explain the difference in fitted log odds. Counts include stage reps for that player and role, the opposing lane matchup, the four relevant allied pairs, recorded bans, and how much champion-role evidence comes from the target patch and league. Unknown teams, players, and thin supporting roles are surfaced. A model needs 30 prior games and eight weighted games to score. Each candidate needs three role appearances and at least one weighted appearance. Fewer than five role appearances in the target league and patch marks the estimate as limited.
 
 The comparison holds the other nine assignments fixed. Run it on different plausible completions when opponents can still change their draft. Observed stage selections and outcomes support conditional estimates. Coaching and player assignment, player proficiency, and which options teams chose can still confound the estimated differences.
+
+## Measuring balance changes
+
+Choose an outcome before calculating a percentage. A damage change in a specified trade, an objective clear-time change, a change in first-item purchase frequency, and a change in expected win probability answer different questions. Each needs its own comparison and denominator.
+
+### Controlled item mechanics
+
+`-patch-mechanics` compares two item definitions on a fixed set of fight profiles. Supply a fixed number of hits or a fixed attack window in seconds. The fixed-hit comparison isolates per-hit changes. The time-window comparison computes attack speed from the base rate, attack-speed ratio, bonuses, and cap. It assumes uninterrupted attacks and the first hit after one attack interval. Spellblade inputs specify the hit indices on which a proc is available. Stacks from previous hits modify base AD, armor reduces physical damage, and fixed other physical damage can be included in the total.
+
+```sh
+GOWORK=off go run . -patch-mechanics /path/to/trinity-force.json
+```
+
+```json
+{
+  "item": "Trinity Force",
+  "before_patch": "13.13",
+  "after_patch": "13.14",
+  "before": {"flat_ad": 40, "bonus_attack_speed": 0.35, "base_ad_per_stack": 0.04, "max_stacks": 5},
+  "after": {"flat_ad": 40, "bonus_attack_speed": 0.33, "base_ad_per_stack": 0.06, "max_stacks": 3},
+  "profiles": [
+    {"name": "short trade", "weight": 1, "base_ad": 100, "target_armor": 100, "hits": 3},
+    {"name": "extended trade", "weight": 1, "base_ad": 100, "target_armor": 100, "hits": 16}
+  ]
+}
+```
+
+This example isolates attack damage and the Threefold Strike ramp. Under these assumptions, the same item update changes total physical damage by +1.39% over three hits and −0.32% over 16. To model attack-speed breakpoints, replace `hits` with `seconds` and provide `base_attack_speed`, `attack_speed_ratio`, and `attack_speed_cap`. To model Spellblade in a planned sequence, specify `spellblade_base_ad_ratio` in each item definition and supply `spellblade_proc_hits` in the profile. Patch notes and versioned static data supply the mechanics. Riot documents that Data Dragon versions can differ from the regional game client. [Riot’s 13.14 changes](https://www.leagueoflegends.com/en-sg/news/game-updates/patch-13-14-notes/) · [Riot’s Data Dragon documentation](https://developer.riotgames.com/docs/lol)
+
+The tool also reports damage added above the same profile without the item. Percentage changes use `100 × (after / before − 1)`. When combining profiles, the tool applies that ratio to the weighted means using the same weights before and after. Weights can represent a fixed pre-patch mix of trade types. The example weights are illustrative. Use the actual rules on either end of a competitive patch jump. That captures changes from skipped public releases if those changes carry into the next competitive build. Build cost, purchase delay, health, movement, target access, proc uptime, and other item choices each require a corresponding outcome or scenario input.
+
+### Estimating the stage impact
+
+| Method | What it can estimate | Main evidence requirement |
+|---|---|---|
+| Linked patch effects, implemented in the draft model | Forecasts for champion-role performance that can move as pro games arrive | Series-level holdouts across patch debuts, established patches, and Worlds. Compare Brier loss and calibration with independent patch effects. |
+| Standardized before/after comparison | The change in an observed outcome under the same mix of champions, roles, opponents, and game states | For item effectiveness, align telemetry at a consistent purchase or inventory landmark and compare pre-landmark covariates with adequate overlap. Keep adoption and in-game performance as separate outcomes. |
+| Staggered event study | How adoption of the complete patch changed outcomes for cohorts with heavy pre-patch reliance on Trinity Force, using competitions that have yet to adopt it as comparators | Group by actual competitive adoption, use patch steps for event time, and check prior trends, concurrent changes, and within-series dependence. Patch adoption changes many mechanics at once. [Callaway and Sant’Anna](https://arxiv.org/abs/1803.09015) |
+| Synthetic control | A counterfactual trajectory for an affected champion-role or build, assembled from a weighted set of comparable pre-patch trajectories | Needs a long pre-patch span, strong pre-period fit, and donors with limited exposure to the change. Run placebo patches and sensitivity analyses for substitutes and spillovers. [Abadie, Diamond, and Hainmueller](https://doi.org/10.1198/jasa.2009.ap08746) |
+
+For an item study, define exposure from pre-patch build usage so players who drop the nerfed item still count in the affected cohort. Item purchase is influenced by gold, game state, matchup, and player decisions. The annual CSV imports draft and outcome data. Estimating an item-specific stage effect requires time-aligned inventory, gold, damage, and objective telemetry, plus credible comparisons for the simultaneous changes on that patch.
+
+A mechanics-informed forecast can extend the implemented zero-mean patch drift. For each champion-role, multiply the item’s controlled damage change by its pre-patch build share and add separate inputs for direct champion or objective changes. Learn how those inputs predict the next patch adjustment from earlier transitions. The coefficient on item exposure translates a mechanical percentage into an estimated change in draft log odds. Hold out entire patch transitions and compare with the current patch-linked model before using that translation.
 
 ## LCS archive replay
 

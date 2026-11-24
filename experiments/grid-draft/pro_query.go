@@ -1,12 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"math"
 	"math/rand/v2"
-	"os"
 	"slices"
 	"strings"
 	"time"
@@ -21,6 +18,7 @@ type proQuery struct {
 	League        string         `json:"league"`
 	Patch         string         `json:"patch"`
 	AsOf          time.Time      `json:"as_of"`
+	MatchAt       time.Time      `json:"match_at"`
 	FirstPickSide string         `json:"first_pick_side"`
 	FocusSide     string         `json:"focus_side"`
 	FocusRole     string         `json:"focus_role"`
@@ -29,24 +27,6 @@ type proQuery struct {
 	Unavailable   []string       `json:"unavailable"`
 	Reference     string         `json:"reference"`
 	Candidates    []string       `json:"candidates"`
-}
-
-func readProQuery(path string) (proQuery, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return proQuery{}, err
-	}
-	defer file.Close()
-	var query proQuery
-	decoder := json.NewDecoder(file)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&query); err != nil {
-		return proQuery{}, fmt.Errorf("read draft scenario: %w", err)
-	}
-	if err := decoder.Decode(new(any)); err != io.EOF {
-		return proQuery{}, fmt.Errorf("provide one JSON draft scenario")
-	}
-	return query, nil
 }
 
 func (q proQuery) prepare() (proGame, map[string]bool, error) {
@@ -58,8 +38,8 @@ func (q proQuery) prepare() (proGame, map[string]bool, error) {
 	game.patch = patch
 	firstSide, focusSide := slices.Index(proSideNames, q.FirstPickSide), slices.Index(proSideNames, q.FocusSide)
 	focusRole := slices.Index(proRoles, q.FocusRole)
-	if q.AsOf.IsZero() || !slices.Contains(tierOneLeagues, q.League) || firstSide < 0 || focusSide < 0 || focusRole < 0 {
-		return game, nil, fmt.Errorf("provide a tier-one league, as_of, first_pick_side, focus_side and focus_role")
+	if q.AsOf.IsZero() || !slices.Contains(proCompetitions, q.League) || firstSide < 0 || focusSide < 0 || focusRole < 0 {
+		return game, nil, fmt.Errorf("provide a supported competition, as_of, first_pick_side, focus_side and focus_role")
 	}
 	game.firstPick = 1 - 2*firstSide
 	if q.Unavailable == nil || len(q.Candidates) < 2 {
@@ -183,6 +163,7 @@ type proDecision struct {
 	Patch               string                          `json:"patch"`
 	PatchSource         string                          `json:"patch_source"`
 	AsOf                time.Time                       `json:"as_of"`
+	MatchAt             time.Time                       `json:"match_at"`
 	Reference           string                          `json:"reference"`
 	TeamSideProbability *float64                        `json:"team_player_side_probability,omitempty"`
 	UnseenTeamIDs       []string                        `json:"unseen_team_ids,omitempty"`
@@ -236,11 +217,18 @@ func proOptionSupport(training []proWeightedGame, model proModel, target proGame
 }
 
 func compareProDrafts(dataset proDataset, resets []proPatch, q proQuery) (proDecision, error) {
+	q.League = proCompetition(q.League)
+	if q.MatchAt.IsZero() {
+		q.MatchAt = q.AsOf
+	}
+	if q.MatchAt.Before(q.AsOf) {
+		return proDecision{}, fmt.Errorf("match_at must be at or after as_of")
+	}
 	patchSource := "scenario"
+	window, source := dataset.calendar.patchAt(q.League, q.MatchAt)
 	if strings.TrimSpace(q.Patch) == "" {
-		window, source := dataset.calendar.patchAt(q.League, q.AsOf)
 		if source == "" {
-			return proDecision{}, fmt.Errorf("no verified %s patch window at %s, provide the competitive patch in the scenario", q.League, q.AsOf.Format(time.RFC3339))
+			return proDecision{}, fmt.Errorf("no verified %s patch window at %s, provide the competitive patch in the scenario", q.League, q.MatchAt.Format(time.RFC3339))
 		}
 		q.Patch, patchSource = window.Patch.String(), source
 	}
@@ -248,24 +236,28 @@ func compareProDrafts(dataset proDataset, resets []proPatch, q proQuery) (proDec
 	if err != nil {
 		return proDecision{}, err
 	}
-	const full = len(proModelSpecs) - 1
+	if source != "" && target.patch != window.Patch {
+		return proDecision{}, fmt.Errorf("%s plays %s at match_at %s, scenario specifies %s", q.League, window.Patch, q.MatchAt.Format(time.RFC3339), target.patch)
+	}
+	const full = fullProModel
 	context := proContext{q.League, target.patch, q.AsOf}
 	training := proTraining(dataset, context, resets, proModelSpecs[full])
 	out := proDecision{
 		Status: "insufficient_training", League: q.League, Patch: target.patch.String(), PatchSource: patchSource, AsOf: q.AsOf,
-		Reference: q.Reference, Training: describeProTraining(training),
+		MatchAt: q.MatchAt, Reference: q.Reference, Training: describeProTraining(training),
 	}
 	if !enoughProHistory(training) {
 		return out, nil
 	}
 	out.Status = "scored"
 	var models [len(proModelSpecs)]proModel
-	models[full] = fitProModel(training, true)
-	models[0] = fitProModel(training, false)
+	axis := proPatchAxis(training, target.patch)
+	models[full] = fitProModel(training, true, axis)
+	models[0] = fitProSpec(training, proModelSpecs[0], target.patch)
 	for i := 1; i < full; i++ {
 		rows := proTraining(dataset, context, resets, proModelSpecs[i])
 		if enoughProHistory(rows) {
-			models[i] = fitProModel(rows, true)
+			models[i] = fitProSpec(rows, proModelSpecs[i], target.patch)
 		}
 	}
 
@@ -337,7 +329,7 @@ func compareProDrafts(dataset proDataset, resets []proPatch, q proQuery) (proDec
 		}
 		out.Options = append(out.Options, option)
 	}
-	for i, interval := range bootstrapProDrafts(training, reference, branches, sign) {
+	for i, interval := range bootstrapProDrafts(training, axis, reference, branches, sign) {
 		out.Options[scoredIndices[i]].Bootstrap95 = &interval
 	}
 	if !referenceSupported {
@@ -369,7 +361,7 @@ func proScoreDelta(model proModel, branch, reference proGame, sign float64) map[
 	return out
 }
 
-func bootstrapProDrafts(training []proWeightedGame, reference proGame, branches []proGame, sign float64) [][2]float64 {
+func bootstrapProDrafts(training []proWeightedGame, axis []proPatch, reference proGame, branches []proGame, sign float64) [][2]float64 {
 	if len(branches) == 0 {
 		return nil
 	}
@@ -400,7 +392,7 @@ func bootstrapProDrafts(training []proWeightedGame, reference proGame, branches 
 	resample := make([]proWeightedGame, 0, len(training))
 	for range draws {
 		clear(multiplicity)
-		for _, league := range tierOneLeagues {
+		for _, league := range proCompetitions {
 			stratum := byLeague[league]
 			for range stratum {
 				multiplicity[stratum[rng.IntN(len(stratum))]]++
@@ -414,7 +406,7 @@ func bootstrapProDrafts(training []proWeightedGame, reference proGame, branches 
 				}
 			}
 		}
-		model := fitProModel(resample, true)
+		model := fitProModel(resample, true, axis)
 		ref := logistic(sign * model.score(reference))
 		for i, branch := range branches {
 			samples[i] = append(samples[i], logistic(sign*model.score(branch))-ref)

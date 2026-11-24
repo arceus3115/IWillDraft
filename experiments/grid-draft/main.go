@@ -32,9 +32,14 @@ func main() {
 	proScenario := flag.String("pro-scenario", "", "JSON draft comparison scenario instead of a backtest")
 	proResets := flag.String("pro-patch-resets", "", "comma-separated patch boundaries that reset draft history")
 	proCalendar := flag.String("pro-patch-calendar", "", "CSV of competitive patch windows (league,patch,start,end)")
+	mechanics := flag.String("patch-mechanics", "", "JSON scenario for a controlled item damage comparison")
 	flag.Parse()
 	var err error
 	switch {
+	case *mechanics != "" && (len(proPaths) > 0 || *proScenario != "" || *proResets != "" || *proCalendar != "" || *api != "" || *replay != ""):
+		err = fmt.Errorf("run patch mechanics separately from the stage models and replay audit")
+	case *mechanics != "":
+		err = runPatchMechanics(*mechanics)
 	case len(proPaths) > 0 && (*api != "" || *replay != ""):
 		err = fmt.Errorf("run the tier-one model and GRID replay or API audit separately")
 	case len(proPaths) > 0:
@@ -46,7 +51,7 @@ func main() {
 	case *data != "":
 		err = runArchive(ctx, *data, *replay, *event, *year)
 	default:
-		err = fmt.Errorf("provide -pro-csv, -data or STL_DATA_DIR, or use -api-series")
+		err = fmt.Errorf("provide -pro-csv, -patch-mechanics, -data or STL_DATA_DIR, or use -api-series")
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -78,7 +83,7 @@ func runProModel(paths []string, year int, scenario, resetFlags, calendarPath st
 		Decision *proDecision            `json:"decision,omitempty"`
 	}{Coverage: dataset.coverage, Calendar: dataset.calendar}
 	if scenario != "" {
-		query, err := readProQuery(scenario)
+		query, err := readJSONInput[proQuery](scenario)
 		if err != nil {
 			return err
 		}
@@ -94,9 +99,13 @@ func runProModel(paths []string, year int, scenario, resetFlags, calendarPath st
 			return err
 		}
 	}
+	return writeJSONResult(out)
+}
+
+func writeJSONResult(result any) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(out)
+	return encoder.Encode(result)
 }
 
 func checkAPI(ctx context.Context, id, data string) error {

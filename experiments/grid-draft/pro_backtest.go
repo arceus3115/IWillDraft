@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"slices"
-	"time"
 )
 
 const minProTrainingWeight = 8
@@ -31,19 +30,21 @@ func backtestPro(dataset proDataset, year int, resets []proPatch) []proPredictio
 		priorLocalPatchGames int
 	}
 	var predictions []proPrediction
-	var week time.Time
-	var models map[proContext]fits
+	type seriesKey struct{ competition, series string }
+	remaining := map[seriesKey]int{}
+	for _, game := range dataset.games {
+		if game.year == year {
+			remaining[seriesKey{game.league, game.series}]++
+		}
+	}
+	models := map[seriesKey]map[proPatch]fits{}
 	for _, game := range dataset.games {
 		if game.year != year {
 			continue
 		}
-		// The game's series shares one cutoff, including series that cross midnight.
-		cutoff := proBacktestCutoff(game.startOfSeries)
-		if !week.Equal(cutoff) {
-			week, models = cutoff, map[proContext]fits{}
-		}
-		target := proContext{game.league, game.patch, cutoff}
-		fit, exists := models[target]
+		key := seriesKey{game.league, game.series}
+		target := proContext{game.league, game.patch, game.startOfSeries}
+		fit, exists := models[key][game.patch]
 		if !exists {
 			for i, spec := range proModelSpecs {
 				training := proTraining(dataset, target, resets, spec)
@@ -55,10 +56,13 @@ func backtestPro(dataset proDataset, year int, resets []proPatch) []proPredictio
 					}
 				}
 				if enoughProHistory(training) {
-					fit.models[i], fit.ready[i] = fitProModel(training, spec.draft), true
+					fit.models[i], fit.ready[i] = fitProSpec(training, spec, target.patch), true
 				}
 			}
-			models[target] = fit
+			if models[key] == nil {
+				models[key] = map[proPatch]fits{}
+			}
+			models[key][game.patch] = fit
 		}
 		prediction := proPrediction{game: game, ready: fit.ready, priorLocalPatchGames: fit.priorLocalPatchGames}
 		for i, model := range fit.models {
@@ -67,13 +71,13 @@ func backtestPro(dataset proDataset, year int, resets []proPatch) []proPredictio
 			}
 		}
 		predictions = append(predictions, prediction)
+		remaining[key]--
+		if remaining[key] == 0 {
+			delete(remaining, key)
+			delete(models, key)
+		}
 	}
 	return predictions
-}
-
-func proBacktestCutoff(start time.Time) time.Time {
-	day := start.UTC().Truncate(24 * time.Hour)
-	return day.AddDate(0, 0, -(int(day.Weekday())+6)%7)
 }
 
 type proCalibration struct {
@@ -132,7 +136,7 @@ type proComparison struct {
 }
 
 func compareProAccuracy(rows []proPrediction, comparator int) *proComparison {
-	const full = len(proModelSpecs) - 1
+	const full = fullProModel
 	totals := map[string]pairedCount{}
 	var order []string
 	out := proComparison{}
@@ -180,7 +184,7 @@ type proBacktestReport struct {
 
 func summarizeProBacktest(predictions []proPrediction, year int) ([]proBacktestReport, error) {
 	var reports []proBacktestReport
-	for _, league := range tierOneLeagues {
+	for _, league := range proCompetitions {
 		all := []proPrediction{}
 		var early, established []proPrediction
 		patches := map[proPatch][]proPrediction{}

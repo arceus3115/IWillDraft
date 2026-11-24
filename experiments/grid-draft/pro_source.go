@@ -3,6 +3,7 @@ package main
 import (
 	"cmp"
 	"fmt"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -10,11 +11,20 @@ import (
 	"unicode"
 )
 
-var tierOneLeagues = []string{"LCS", "LCK", "LPL", "LEC"}
+const proWorlds = "WORLDS"
+
+var proCompetitions = []string{"LCS", "LCK", "LPL", "LEC", proWorlds}
 var proRoles = []string{"top", "jng", "mid", "bot", "sup"}
 var proSideNames = []string{"blue", "red"}
 
 const proSides = 2
+
+func proCompetition(code string) string {
+	if strings.EqualFold(code, "WLDs") {
+		return proWorlds
+	}
+	return strings.ToUpper(code)
+}
 
 type proPatch struct{ version, update int }
 
@@ -73,14 +83,15 @@ type oracleGame struct {
 }
 
 type proCoverage struct {
-	Eligible          int            `json:"eligible_games"`
-	Rejected          map[string]int `json:"rejected_games_by_reason"`
-	Patches           map[string]int `json:"eligible_games_by_patch"`
-	First             *time.Time     `json:"first_game,omitempty"`
-	Last              *time.Time     `json:"last_game,omitempty"`
-	FirstPickKnown    int            `json:"first_pick_known_games"`
-	PatchSources      map[string]int `json:"eligible_games_by_patch_source"`
-	ScheduleConflicts int            `json:"patch_schedule_conflicts,omitempty"`
+	Eligible           int            `json:"eligible_games"`
+	Rejected           map[string]int `json:"rejected_games_by_reason"`
+	Patches            map[string]int `json:"eligible_games_by_patch"`
+	First              *time.Time     `json:"first_game,omitempty"`
+	Last               *time.Time     `json:"last_game,omitempty"`
+	FirstPickKnown     int            `json:"first_pick_known_games"`
+	PatchSources       map[string]int `json:"eligible_games_by_patch_source"`
+	ScheduleConflicts  int            `json:"patch_schedule_conflicts,omitempty"`
+	RegionalQualifiers int            `json:"worlds_qualifiers_reclassified,omitempty"`
 }
 
 var oracleColumns = []string{"gameid", "league", "year", "split", "date", "game", "side", "position",
@@ -93,14 +104,15 @@ type proDataset struct {
 }
 
 func importProGames(paths []string, scheduled map[string][]proPatchWindow) (proDataset, error) {
+	scheduled = withWorldsSchedule(scheduled)
 	coverage := make(map[string]*proCoverage)
-	for _, league := range tierOneLeagues {
+	for _, league := range proCompetitions {
 		coverage[league] = &proCoverage{Rejected: map[string]int{}, Patches: map[string]int{}, PatchSources: map[string]int{}}
 	}
 	index := map[string]*oracleGame{}
 	for _, path := range paths {
 		err := readCSV(path, func(row map[string]string) error {
-			league := row["league"]
+			league := proCompetition(row["league"])
 			if coverage[league] == nil {
 				return nil
 			}
@@ -127,7 +139,11 @@ func importProGames(paths []string, scheduled map[string][]proPatchWindow) (proD
 				for _, field := range oracleColumns {
 					keep[field] = row[field]
 				}
+				keep["league"] = league
 				keep["firstPick"] = row["firstPick"]
+				if league == proWorlds && position == len(proRoles) {
+					keep["url"] = row["url"]
+				}
 				keep["patch"] = strings.TrimSpace(row["patch"])
 				if keep["patch"] == "" {
 					keep["patch"] = group.rows[side][position]["patch"]
@@ -145,8 +161,9 @@ func importProGames(paths []string, scheduled map[string][]proPatchWindow) (proD
 		year                                  int
 	}
 	type entry struct {
-		game   proGame
-		reason string
+		game              proGame
+		reason            string
+		regionalQualifier bool
 	}
 	pairs := map[seriesKey][]entry{}
 	var tagged []proGame
@@ -157,6 +174,28 @@ func importProGames(paths []string, scheduled map[string][]proPatchWindow) (proD
 			coverage[league].Rejected[reason]++
 			continue
 		}
+		regionalQualifier := false
+		if game.league == proWorlds {
+			windows := scheduled[proWorlds]
+			window := proWindowIndex(windows, game.start)
+			switch {
+			case window >= 0:
+				if reason == "" && game.patch != (proPatch{}) && game.patch != windows[window].Patch {
+					reason = "recorded patch conflicts with Worlds lock"
+				}
+			case slices.ContainsFunc(windows, func(known proPatchWindow) bool {
+				return known.Start.Year() == game.year && game.start.Before(known.Start)
+			}) && group.isLPLQualifier():
+				if index["LPL/"+game.id] != nil {
+					continue
+				}
+				game.league = "LPL"
+				regionalQualifier = true
+			default:
+				coverage[proWorlds].Rejected["outside scheduled Worlds event"]++
+				continue
+			}
+		}
 		if reason == "" && game.patch != (proPatch{}) {
 			tagged = append(tagged, game)
 		}
@@ -166,7 +205,7 @@ func importProGames(paths []string, scheduled map[string][]proPatchWindow) (proD
 			nativeID = prefix
 		}
 		pair := seriesKey{game.league, game.split, min(blue, red), max(blue, red), nativeID, game.year}
-		pairs[pair] = append(pairs[pair], entry{game, reason})
+		pairs[pair] = append(pairs[pair], entry{game, reason, regionalQualifier})
 	}
 
 	calendar := buildProPatchCalendar(scheduled, tagged, coverage)
@@ -220,6 +259,9 @@ func importProGames(paths []string, scheduled map[string][]proPatchWindow) (proD
 				}
 				games = append(games, game)
 				report.Eligible++
+				if row.regionalQualifier {
+					report.RegionalQualifiers++
+				}
 				report.PatchSources[patchSource]++
 				if game.firstPick != 0 {
 					report.FirstPickKnown++
@@ -238,8 +280,18 @@ func importProGames(paths []string, scheduled map[string][]proPatchWindow) (proD
 	return proDataset{games, coverage, calendar}, nil
 }
 
+func (group *oracleGame) isLPLQualifier() bool {
+	for _, side := range group.rows {
+		address, err := url.Parse(side[len(proRoles)]["url"])
+		if err == nil && address.Hostname() == "lpl.qq.com" {
+			return true
+		}
+	}
+	return false
+}
+
 func sameOracleRow(a, b map[string]string) bool {
-	for _, field := range []string{"league", "year", "split", "date", "game", "teamid",
+	for _, field := range []string{"year", "split", "date", "game", "teamid",
 		"playerid", "champion", "result", "ban1", "ban2", "ban3", "ban4", "ban5", "firstPick"} {
 		if a[field] != b[field] {
 			return false

@@ -20,9 +20,8 @@ func TestCompetitivePatchDistanceCountsPlayedLeagueUpdatesOnly(t *testing.T) {
 	}
 	calendar := buildProPatchCalendar(nil, games, nil)
 	target := proContext{"LCK", proPatch{16, 6}, cutoff}
-	training := proTraining(proDataset{games: games, calendar: calendar}, target, nil, proModelSpecs[3])
-	oldWeight := math.Exp2(-14.0 / 60)
-	want := map[string]float64{"LCK": oldWeight * math.Exp2(-0.5), "LPL": oldWeight * math.Exp2(-1)}
+	training := proTraining(proDataset{games: games, calendar: calendar}, target, nil, proModelSpecs[fullProModel])
+	want := map[string]float64{"LCK": math.Exp2(-0.5), "LPL": math.Exp2(-1)}
 	for _, row := range training {
 		if row.game.patch.update != 3 {
 			continue
@@ -34,6 +33,34 @@ func TestCompetitivePatchDistanceCountsPlayedLeagueUpdatesOnly(t *testing.T) {
 	}
 	if len(want) > 0 {
 		t.Fatalf("missing training games: %v", want)
+	}
+}
+
+func TestWorldsUsesLockedPatchAndRetainsEarlierEvidence(t *testing.T) {
+	start := time.Date(2026, 10, 15, 0, 0, 0, 0, time.UTC)
+	locked := proPatch{16, 20}
+	scheduled := map[string][]proPatchWindow{
+		proWorlds: {{Patch: locked, Start: start, End: start.AddDate(0, 0, 32)}},
+		"LPL":     {{Patch: proPatch{16, 21}, Start: start, End: start.AddDate(0, 0, 28)}},
+	}
+	game := func(id, competition string, patch proPatch, date time.Time) proGame {
+		return proGame{id: id, league: competition, patch: patch, start: date, available: date.Add(historyLag)}
+	}
+	games := []proGame{
+		game("opening", proWorlds, locked, start),
+		game("regional-newer", "LPL", proPatch{16, 21}, start.AddDate(0, 0, 4)),
+		game("later-worlds", proWorlds, locked, start.AddDate(0, 0, 23)),
+	}
+	calendar := buildProPatchCalendar(scheduled, games, nil)
+	final := start.AddDate(0, 0, 30)
+	if window, source := calendar.patchAt(proWorlds, final); window.Patch != locked || source != "scheduled" {
+		t.Fatalf("Worlds final patch = %v, source = %s", window, source)
+	}
+	context := proContext{proWorlds, locked, final}
+	rows := proTraining(proDataset{games: games, calendar: calendar}, context, nil, proModelSpecs[fullProModel])
+	if len(rows) != 2 || rows[0].game.id != "opening" || rows[1].game.id != "later-worlds" ||
+		rows[0].weight != 1 || rows[1].weight != 1 {
+		t.Fatalf("unexpected locked-patch training: %+v", rows)
 	}
 }
 

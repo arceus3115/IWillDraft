@@ -17,7 +17,7 @@ func TestOracleImportBuildsSeriesBeforeDroppingUnusableGames(t *testing.T) {
 		t.Fatal(err)
 	}
 	writer := csv.NewWriter(file)
-	fields := append(append([]string{}, oracleColumns...), "firstPick", "patch")
+	fields := append(append([]string{}, oracleColumns...), "firstPick", "patch", "url")
 	header := append([]string{}, fields...)
 	header[0] = "\ufeff" + header[0]
 	if err := writer.Write(header); err != nil {
@@ -33,6 +33,9 @@ func TestOracleImportBuildsSeriesBeforeDroppingUnusableGames(t *testing.T) {
 					"side": sideName, "position": position, "teamid": fmt.Sprintf("t%d", (side+number)%2),
 					"playerid": fmt.Sprintf("p%d%d", side, role), "champion": fmt.Sprintf("c%d%d", side, role),
 					"result": fmt.Sprint(1 - side), "firstPick": fmt.Sprint(side), "ban1": "Dr. Mundo",
+				}
+				if id == "lpl-qualifier" {
+					row["url"] = "https://lpl.qq.com/es/stats.shtml?bmid=123"
 				}
 				record := make([]string, len(header))
 				for i, column := range fields {
@@ -51,6 +54,10 @@ func TestOracleImportBuildsSeriesBeforeDroppingUnusableGames(t *testing.T) {
 	recordGame("LDL", "ignored", "16.02", 1, start)
 	recordGame("LPL", "native_game_1", "16.02", 1, start)
 	recordGame("LPL", "native_game_2", "", 2, start.Add(time.Hour))
+	worldsStart := time.Date(2026, 10, 15, 18, 0, 0, 0, time.UTC)
+	recordGame("WLDs", "lpl-qualifier", "16.19", 1, worldsStart.AddDate(0, 0, -15))
+	recordGame("WLDs", "worlds", "16.20", 1, worldsStart)
+	recordGame("WLDs", "conflict", "16.21", 1, worldsStart.AddDate(0, 0, 3))
 	writer.Flush()
 	if err := writer.Error(); err != nil {
 		t.Fatal(err)
@@ -63,15 +70,24 @@ func TestOracleImportBuildsSeriesBeforeDroppingUnusableGames(t *testing.T) {
 		t.Fatal(err)
 	}
 	games, coverage := dataset.games, dataset.coverage
-	if len(games) != 4 || coverage["LPL"].Rejected["missing patch outside verified league windows"] != 1 ||
-		coverage["LCK"].Eligible != 1 || coverage["LEC"].Eligible != 1 || coverage["LCS"].Eligible != 1 {
+	if len(games) != 6 || coverage["LPL"].Rejected["missing patch outside verified league windows"] != 1 ||
+		coverage["LCK"].Eligible != 1 || coverage["LEC"].Eligible != 1 || coverage["LCS"].Eligible != 1 ||
+		coverage["LPL"].RegionalQualifiers != 1 || coverage[proWorlds].Eligible != 1 ||
+		coverage[proWorlds].Rejected["recorded patch conflicts with Worlds lock"] != 1 {
 		t.Fatalf("unexpected tier-one import: %+v, %+v", games, coverage)
 	}
 	for _, game := range games {
-		if game.patch != (proPatch{16, 2}) || game.firstPick != -1 || !game.bans["drmundo"] {
+		wantPatch := proPatch{16, 2}
+		if game.league == proWorlds {
+			wantPatch = proPatch{16, 20}
+		}
+		if game.id == "lpl-qualifier" {
+			wantPatch = proPatch{16, 19}
+		}
+		if game.patch != wantPatch || game.firstPick != -1 || !game.bans["drmundo"] {
 			t.Fatalf("incorrect draft normalization: %+v", game)
 		}
-		if game.league == "LPL" && !game.available.Equal(start.Add(5*time.Hour)) {
+		if game.id == "native_game_1" && !game.available.Equal(start.Add(5*time.Hour)) {
 			t.Fatalf("unusable game shortened the series cutoff: %s", game.available)
 		}
 	}
@@ -83,12 +99,12 @@ func TestOracleImportBuildsSeriesBeforeDroppingUnusableGames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(withCalendar.games) != 5 || withCalendar.coverage["LPL"].PatchSources["scheduled"] != 1 ||
-		withCalendar.coverage["LPL"].PatchSources["recorded"] != 1 || withCalendar.coverage["LCK"].ScheduleConflicts != 1 {
+	if len(withCalendar.games) != 7 || withCalendar.coverage["LPL"].PatchSources["scheduled"] != 1 ||
+		withCalendar.coverage["LPL"].PatchSources["recorded"] != 2 || withCalendar.coverage["LCK"].ScheduleConflicts != 1 {
 		t.Fatalf("unexpected scheduled patch resolution: %+v", withCalendar.coverage)
 	}
 	for _, game := range withCalendar.games {
-		if game.patch != (proPatch{16, 2}) {
+		if game.league != proWorlds && game.id != "lpl-qualifier" && game.patch != (proPatch{16, 2}) {
 			t.Fatalf("calendar altered a recorded patch: %+v", game)
 		}
 	}
@@ -105,15 +121,16 @@ func TestProTrainingUsesPriorSeriesComparablePatchesAndLeagueBudget(t *testing.T
 	overlap := row("overlap", "LCK", proPatch{16, 9}, 1)
 	overlap.available = cutoff
 	games := []proGame{local, older, overlap, row("future", "LPL", proPatch{16, 10}, 1),
-		row("prior-season", "LPL", proPatch{15, 9}, 1), row("stale", "LPL", proPatch{16, 9}, 181)}
+		row("prior-season", "LPL", proPatch{15, 9}, 1), row("early-same-patch", "LPL", proPatch{16, 9}, 181)}
 	for i := range 50 {
 		games = append(games, row(fmt.Sprintf("donor-%d", i), "LPL", proPatch{16, 9}, 1))
 	}
 	target := proContext{"LCK", proPatch{16, 9}, cutoff}
 	reset := []proPatch{{16, 9}, {16, 10}}
 	dataset := proDataset{games: games}
-	training := proTraining(dataset, target, reset, proModelSpecs[3])
-	if len(training) != 51 || training[0].game.id != "local" {
+	training := proTraining(dataset, target, reset, proModelSpecs[fullProModel])
+	if len(training) != 52 || training[0].game.id != "local" || training[1].game.id != "early-same-patch" ||
+		training[1].weight != training[2].weight {
 		t.Fatalf("selected %d games including %+v", len(training), training[0].game)
 	}
 	var donorWeight float64
@@ -168,10 +185,11 @@ func TestProDraftComparisonKeepsReferenceAndLegalityExplicit(t *testing.T) {
 		games = append(games, g)
 	}
 	query.Patch = ""
+	query.MatchAt = query.AsOf.Add(2 * time.Hour)
 	dataset := proDataset{
 		games: games,
 		calendar: proPatchCalendar{Scheduled: map[string][]proPatchWindow{
-			"LCK": {{Patch: proPatch{16, 8}, Start: start, End: query.AsOf.Add(time.Hour)}},
+			"LCK": {{Patch: proPatch{16, 8}, Start: query.AsOf.Add(time.Hour), End: query.MatchAt.Add(time.Hour)}},
 		}},
 	}
 	decision, err := compareProDrafts(dataset, nil, query)
@@ -196,5 +214,41 @@ func TestProDraftComparisonKeepsReferenceAndLegalityExplicit(t *testing.T) {
 	logit := func(p float64) float64 { return math.Log(p / (1 - p)) }
 	if math.Abs(contribution-(logit(candidate.Probability[full])-logit(ref.Probability[full]))) > 1e-9 {
 		t.Fatalf("explanations do not sum to the fitted contrast: %g", contribution)
+	}
+	query.Patch = "26.9"
+	if _, err := compareProDrafts(dataset, nil, query); err == nil {
+		t.Fatal("scenario accepted a patch different from the scheduled competition patch")
+	}
+}
+
+func TestPatchDriftCarriesLearnedAdjustmentToUnseenTargetPatch(t *testing.T) {
+	old, recent, target := proPatch{16, 8}, proPatch{16, 9}, proPatch{16, 10}
+	game := proGame{league: "LCK", patch: old}
+	for side := range game.sides {
+		game.sides[side].Team = fmt.Sprintf("team-%d", side)
+		for role := range game.sides[side].Picks {
+			key := fmt.Sprintf("%d-%d", side, role)
+			game.sides[side].Picks[role] = proPick{Player: "player-" + key, Champion: "champion-" + key}
+		}
+	}
+	var training []proWeightedGame
+	for i := range 80 {
+		row := game
+		if i < 40 {
+			row.blueWon = 1
+		} else {
+			row.patch = recent
+		}
+		training = append(training, proWeightedGame{game: row, weight: 1})
+	}
+	lastTerm := proFeature{kind: patchChampionEffect, role: 0, a: "champion-0-0", patch: recent}
+	nextTerm := lastTerm
+	nextTerm.patch = target
+	carried := fitProSpec(training, proModelSpecs[fullProModel], target)
+	independent := fitProModel(training, true, nil)
+	last, next := carried.coef[lastTerm], carried.coef[nextTerm]
+	if last.value >= 0 || next.games != 0 || math.Abs(next.value-last.value) > 1e-10 ||
+		independent.coef[nextTerm].value != 0 {
+		t.Fatalf("expected the sparse forecast to carry forward the learned shift: %+v -> %+v", last, next)
 	}
 }

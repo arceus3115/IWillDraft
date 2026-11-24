@@ -18,6 +18,24 @@ import (
 	grid "github.com/arceus3115/grid-framework"
 )
 
+func readJSONInput[T any](path string) (T, error) {
+	var input T
+	file, err := os.Open(path)
+	if err != nil {
+		return input, err
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		return input, fmt.Errorf("%s: %w", path, err)
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return input, fmt.Errorf("%s: expected one JSON value", path)
+	}
+	return input, nil
+}
+
 type appearance struct {
 	Player, Name, Champion, ChampionName, Team string
 }

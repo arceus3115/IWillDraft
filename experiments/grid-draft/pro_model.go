@@ -2,27 +2,28 @@ package main
 
 import (
 	"math"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 )
 
-const (
-	proHistoryWindow = 180 * 24 * time.Hour
-	minProTrain      = 30
-)
+const minProTrain = 30
 
 type proModelSpec struct {
-	name                            string
-	draft, localOnly, samePatchOnly bool
+	name                                        string
+	draft, localOnly, samePatchOnly, patchDrift bool
 }
 
 var proModelSpecs = [...]proModelSpec{
 	{name: "team_player_side"},
 	{name: "league_only", draft: true, localOnly: true},
 	{name: "same_patch_only", draft: true, samePatchOnly: true},
-	{name: "cross_league_cross_patch", draft: true},
+	{name: "independent_patch_effects", draft: true},
+	{name: "cross_league_cross_patch", draft: true, patchDrift: true},
 }
+
+const fullProModel = len(proModelSpecs) - 1
 
 type proContext struct {
 	league string
@@ -36,7 +37,6 @@ type proWeightedGame struct {
 }
 
 func proTraining(dataset proDataset, target proContext, resets []proPatch, spec proModelSpec) []proWeightedGame {
-	oldest := target.cutoff.Add(-proHistoryWindow)
 	minPatch := 1
 	for _, reset := range resets {
 		if reset.version == target.patch.version && reset.update <= target.patch.update {
@@ -47,18 +47,17 @@ func proTraining(dataset proDataset, target proContext, resets []proPatch, spec 
 	mass := map[string]float64{}
 	updatesByLeague := dataset.calendar.competitiveUpdates(target)
 	for _, game := range dataset.games {
-		if !game.available.Before(target.cutoff) || game.start.Before(oldest) ||
+		if !game.available.Before(target.cutoff) ||
 			game.patch.version != target.patch.version || game.patch.update < minPatch ||
 			game.patch.update > target.patch.update ||
 			(spec.localOnly && game.league != target.league) ||
 			(spec.samePatchOnly && game.patch != target.patch) {
 			continue
 		}
-		days := target.cutoff.Sub(game.start).Hours() / 24
 		updates := updatesByLeague[game.league]
 		firstNewer := sort.Search(len(updates), func(i int) bool { return updates[i] > game.patch.update })
 		patchDistance := float64(len(updates) - firstNewer)
-		weight := math.Exp2(-days/60 - patchDistance/2)
+		weight := math.Exp2(-patchDistance / 2)
 		training = append(training, proWeightedGame{game, weight})
 		mass[game.league] += weight
 	}
@@ -101,6 +100,7 @@ type proFeature struct {
 	role    int
 	partner int
 	a, b    string
+	patch   proPatch
 }
 
 type proTerm struct {
@@ -111,7 +111,7 @@ type proTerm struct {
 func proTerms(game proGame, draft bool) []proTerm {
 	terms := make([]proTerm, 0, 80)
 	add := func(kind proFeatureKind, role, partner int, a, b string, sign float64) {
-		terms = append(terms, proTerm{proFeature{kind, role, partner, a, b}, sign})
+		terms = append(terms, proTerm{proFeature{kind: kind, role: role, partner: partner, a: a, b: b}, sign})
 	}
 	add(sideEffect, 0, 0, "", "", 1)
 	add(leagueSideEffect, 0, 0, game.league, "", 1)
@@ -120,15 +120,15 @@ func proTerms(game proGame, draft bool) []proTerm {
 	}
 	for side, lineup := range game.sides {
 		sign := 1 - 2*float64(side)
-		add(teamEffect, 0, 0, game.league, lineup.Team, sign)
+		add(teamEffect, 0, 0, "", lineup.Team, sign)
 		for i, pick := range lineup.Picks {
-			add(playerEffect, 0, 0, game.league, pick.Player, sign)
+			add(playerEffect, 0, 0, "", pick.Player, sign)
 			if !draft {
 				continue
 			}
 			add(championEffect, i, 0, pick.Champion, "", sign)
 			add(leagueChampionEffect, i, 0, pick.Champion, game.league, sign)
-			add(patchChampionEffect, i, 0, pick.Champion, game.patch.String(), sign)
+			terms = append(terms, proTerm{proFeature{kind: patchChampionEffect, role: i, a: pick.Champion, patch: game.patch}, sign})
 			add(playerChampionEffect, i, 0, pick.Champion, pick.Player, sign)
 			for j := i + 1; j < len(lineup.Picks); j++ {
 				add(synergyEffect, i, j, pick.Champion, lineup.Picks[j].Champion, sign)
@@ -172,16 +172,40 @@ func (m proModel) score(game proGame) float64 {
 	return score
 }
 
-func fitProModel(training []proWeightedGame, draft bool) proModel {
+func fitProSpec(training []proWeightedGame, spec proModelSpec, target proPatch) proModel {
+	var axis []proPatch
+	if spec.patchDrift {
+		axis = proPatchAxis(training, target)
+	}
+	return fitProModel(training, spec.draft, axis)
+}
+
+func proPatchAxis(training []proWeightedGame, target proPatch) []proPatch {
+	seen := map[proPatch]bool{target: true}
+	for _, row := range training {
+		seen[row.game.patch] = true
+	}
+	axis := make([]proPatch, 0, len(seen))
+	for patch := range seen {
+		axis = append(axis, patch)
+	}
+	slices.SortFunc(axis, func(a, b proPatch) int { return a.update - b.update })
+	return axis
+}
+
+func fitProModel(training []proWeightedGame, draft bool, axis []proPatch) proModel {
 	type observation struct {
 		row  int
 		sign float64
 	}
 	type column struct {
-		feature proFeature
-		rows    []observation
-		weight  float64
-		value   float64
+		feature                     proFeature
+		rows                        []observation
+		weight                      float64
+		value                       float64
+		ridge                       float64
+		before, after               int
+		beforePenalty, afterPenalty float64
 	}
 	indices := map[proFeature]int{}
 	var columns []column
@@ -191,10 +215,48 @@ func fitProModel(training []proWeightedGame, draft bool) proModel {
 			if !ok {
 				j = len(columns)
 				indices[term.feature] = j
-				columns = append(columns, column{feature: term.feature})
+				columns = append(columns, column{feature: term.feature, ridge: proRidge[term.feature.kind]})
 			}
 			columns[j].rows = append(columns[j].rows, observation{i, term.sign})
 			columns[j].weight += row.weight
+		}
+	}
+	if len(axis) > 1 {
+		rank := make(map[proPatch]int, len(axis))
+		for i, patch := range axis {
+			rank[patch] = i
+		}
+		target := axis[len(axis)-1]
+		chains := map[proFeature][]int{}
+		var championRoles []proFeature
+		for i, col := range columns {
+			if col.feature.kind == patchChampionEffect {
+				key := col.feature
+				key.patch = proPatch{}
+				if len(chains[key]) == 0 {
+					championRoles = append(championRoles, key)
+				}
+				chains[key] = append(chains[key], i)
+			}
+		}
+		for _, key := range championRoles {
+			chain := chains[key]
+			slices.SortFunc(chain, func(i, j int) int {
+				return rank[columns[i].feature.patch] - rank[columns[j].feature.patch]
+			})
+			if columns[chain[len(chain)-1]].feature.patch != target {
+				key.patch = target
+				chain = append(chain, len(columns))
+				columns = append(columns, column{feature: key})
+			}
+			for k := 1; k < len(chain); k++ {
+				before, after := chain[k-1], chain[k]
+				steps := rank[columns[after].feature.patch] - rank[columns[before].feature.patch]
+				// Independent increments add variance over unobserved patch steps.
+				precision := 80 / float64(steps)
+				columns[before].after, columns[before].afterPenalty = after, precision
+				columns[after].before, columns[after].beforePenalty, columns[after].ridge = before, precision, 0
+			}
 		}
 	}
 	logits := make([]float64, len(training))
@@ -202,14 +264,20 @@ func fitProModel(training []proWeightedGame, draft bool) proModel {
 		maxChange := 0.0
 		for i := range columns {
 			col := &columns[i]
-			ridge := proRidge[col.feature.kind]
-			gradient := ridge * col.value
+			curvature := col.ridge + col.beforePenalty + col.afterPenalty
+			gradient := curvature * col.value
+			if col.beforePenalty > 0 {
+				gradient -= col.beforePenalty * columns[col.before].value
+			}
+			if col.afterPenalty > 0 {
+				gradient -= col.afterPenalty * columns[col.after].value
+			}
 			for _, obs := range col.rows {
 				row := training[obs.row]
 				gradient += row.weight * obs.sign * (logistic(logits[obs.row]) - row.game.blueWon)
 			}
 			// .25 is the upper bound on the logistic loss curvature for a signed unit feature.
-			change := -gradient / (ridge + 0.25*col.weight)
+			change := -gradient / (curvature + 0.25*col.weight)
 			col.value += change
 			maxChange = max(maxChange, math.Abs(change))
 			for _, obs := range col.rows {
