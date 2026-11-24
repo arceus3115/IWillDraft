@@ -11,13 +11,29 @@ GOWORK=off go run . -pro-csv "$OE_2026_CSV" -pro-scenario /path/to/scenario.json
 
 The backtest refits each league and competitive patch at the start of each UTC week. A series enters training four hours after its last observed game start. Series identity uses the source series key when embedded in the game ID and otherwise uses the league, season, split, team pair, ordered game numbers, and timestamps. Held-out games share their series' cutoff. The report shows Brier loss, log loss, and calibration by league, patch, and whether the league had fewer than 15 preceding games on the target patch. It compares transfer against a team/player/side baseline, a target-league model, and a same-patch model. Each comparison uses the games scored by both models and resamples whole series for intervals. Check coverage alongside each comparison, particularly early in a patch.
 
-Training uses up to 180 days in the same client major and weights each older game by both elapsed time (60-day half-life) and patch distance (two-update half-life). A donor league contributes at most half the greater of the target league's weight and 12. `-pro-patch-resets 26.13,26.19` is an example of an analyst-specified reset. Each reset excludes earlier patches when scoring that patch or later in the same major. Patch labels such as `26.13` and `16.13` resolve to the same version. Choose the scheduled **competitive** patch for a matchup.
+Training uses up to 180 days in the same client major, with a 60-day half-life. Patch decay halves the weight every two **competitive** patch steps. For each historical game it counts distinct intervening patches that the game's league or the target league had played or started on their competitive calendars by the training cutoff. It includes the target patch once even when it is a scheduled debut. Same-patch games have zero patch decay. A donor league contributes at most half the greater of the target league's weight and 12. `-pro-patch-resets 26.13,26.19` is an example of an analyst-specified reset. Each reset excludes earlier patches when scoring that patch or later in the same major.
+
+### Competitive patch calendar
+
+Oracle's Elixir supplies a game patch where available. The GRID archive also has a game-level patch in `meta/games.csv`. The tier-one importer keeps the recorded patch when present and compiles observed windows per league from runs of games with the same tag. For a feed with missing tags or no `patch` column, pass one dated range per league and competitive patch.
+
+```sh
+GOWORK=off go run . -pro-csv "$OE_2026_CSV" -pro-patch-calendar "$PATCH_CALENDAR_CSV"
+```
+
+```csv
+league,patch,start,end
+LCK,26.6,2026-04-01T08:00:00Z,2026-04-08T08:00:00Z
+LCK,26.7,2026-04-08T08:00:00Z,2026-04-22T08:00:00Z
+```
+
+The dates above illustrate the format. Use verified competitive dates with explicit UTC offsets. Starts are inclusive, ends are exclusive, and windows may overlap across different leagues. Patch labels such as `26.6` and `16.6` resolve to the same version. A recorded game that contradicts a scheduled window is counted in coverage and disables automatic assignment from that window. An untagged game can also inherit a patch when bracketed by matching recorded games in its own league. In a historical backtest, that game enters training only after the patch window is corroborated and its series is available. Games in uncovered gaps are reported as rejected. JSON includes the resolved windows and counts by patch source.
 
 The logistic model jointly estimates map side, first-pick side, and team and player strength alongside champion-by-role effects. Shared champion effects have shrunk league and patch adjustments. Player-champion, allied-pair, and direct lane-matchup terms shrink more heavily. Weighting and penalties are fixed experiment settings. They let the backtest test whether transfer or additional draft context earns its place.
 
 ### Compare a draft choice
 
-Set nine champion assignments and leave the focus role's champion empty. Use team and player IDs from the CSV, a timestamp with a UTC offset, and the current draft's bans, earlier Fearless locks, and any patch disables in `unavailable`. Supply a legal reference and the alternatives the coach wants to review. Map side and first-pick side are independent under First Selection. [Riot’s First Selection rules](https://lolesports.com/en-GB/news/season-start-2026-lol-esports)
+Set nine champion assignments and leave the focus role's champion empty. Use team and player IDs from the CSV, a timestamp with a UTC offset, and the current draft's bans, earlier Fearless locks, and any patch disables in `unavailable`. Supply a legal reference and the alternatives the coach wants to review. When `patch` is omitted, the scenario uses the league's competitive patch window at `as_of`. Specify the competitive patch for a planned matchup outside the covered dates. Map side and first-pick side are independent under First Selection. [Riot’s First Selection rules](https://lolesports.com/en-GB/news/season-start-2026-lol-esports)
 
 ```json
 {

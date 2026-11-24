@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"sort"
 	"strings"
 	"time"
 )
@@ -34,7 +35,7 @@ type proWeightedGame struct {
 	weight float64
 }
 
-func proTraining(games []proGame, target proContext, resets []proPatch, spec proModelSpec) []proWeightedGame {
+func proTraining(dataset proDataset, target proContext, resets []proPatch, spec proModelSpec) []proWeightedGame {
 	oldest := target.cutoff.Add(-proHistoryWindow)
 	minPatch := 1
 	for _, reset := range resets {
@@ -44,7 +45,8 @@ func proTraining(games []proGame, target proContext, resets []proPatch, spec pro
 	}
 	var training []proWeightedGame
 	mass := map[string]float64{}
-	for _, game := range games {
+	updatesByLeague := dataset.calendar.competitiveUpdates(target)
+	for _, game := range dataset.games {
 		if !game.available.Before(target.cutoff) || game.start.Before(oldest) ||
 			game.patch.version != target.patch.version || game.patch.update < minPatch ||
 			game.patch.update > target.patch.update ||
@@ -53,7 +55,9 @@ func proTraining(games []proGame, target proContext, resets []proPatch, spec pro
 			continue
 		}
 		days := target.cutoff.Sub(game.start).Hours() / 24
-		patchDistance := float64(target.patch.update - game.patch.update)
+		updates := updatesByLeague[game.league]
+		firstNewer := sort.Search(len(updates), func(i int) bool { return updates[i] > game.patch.update })
+		patchDistance := float64(len(updates) - firstNewer)
 		weight := math.Exp2(-days/60 - patchDistance/2)
 		training = append(training, proWeightedGame{game, weight})
 		mass[game.league] += weight

@@ -31,14 +31,15 @@ func main() {
 	proYear := flag.Int("pro-year", 2026, "target season for the tier-one backtest")
 	proScenario := flag.String("pro-scenario", "", "JSON draft comparison scenario instead of a backtest")
 	proResets := flag.String("pro-patch-resets", "", "comma-separated patch boundaries that reset draft history")
+	proCalendar := flag.String("pro-patch-calendar", "", "CSV of competitive patch windows (league,patch,start,end)")
 	flag.Parse()
 	var err error
 	switch {
 	case len(proPaths) > 0 && (*api != "" || *replay != ""):
 		err = fmt.Errorf("run the tier-one model and GRID replay or API audit separately")
 	case len(proPaths) > 0:
-		err = runProModel(proPaths, *proYear, *proScenario, *proResets)
-	case *proScenario != "" || *proResets != "" || *proYear != 2026:
+		err = runProModel(proPaths, *proYear, *proScenario, *proResets, *proCalendar)
+	case *proScenario != "" || *proResets != "" || *proCalendar != "" || *proYear != 2026:
 		err = fmt.Errorf("provide at least one -pro-csv for the tier-one model")
 	case *api != "":
 		err = checkAPI(ctx, *api, *data)
@@ -53,37 +54,42 @@ func main() {
 	}
 }
 
-func runProModel(paths []string, year int, scenario, resetFlags string) error {
+func runProModel(paths []string, year int, scenario, resetFlags, calendarPath string) error {
 	resets, err := parsePatchResets(resetFlags)
 	if err != nil {
 		return err
 	}
-	games, coverage, err := importProGames(paths)
+	scheduled, err := readProPatchWindows(calendarPath)
 	if err != nil {
 		return err
 	}
-	if len(games) == 0 {
+	dataset, err := importProGames(paths, scheduled)
+	if err != nil {
+		return err
+	}
+	if len(dataset.games) == 0 {
 		return fmt.Errorf("no eligible tier-one games in the supplied CSVs")
 	}
 	out := struct {
 		Year     int                     `json:"backtest_year,omitempty"`
 		Coverage map[string]*proCoverage `json:"input_coverage"`
+		Calendar proPatchCalendar        `json:"competitive_patch_windows"`
 		Backtest []proBacktestReport     `json:"backtest,omitempty"`
 		Decision *proDecision            `json:"decision,omitempty"`
-	}{Coverage: coverage}
+	}{Coverage: dataset.coverage, Calendar: dataset.calendar}
 	if scenario != "" {
 		query, err := readProQuery(scenario)
 		if err != nil {
 			return err
 		}
-		decision, err := compareProDrafts(games, resets, query)
+		decision, err := compareProDrafts(dataset, resets, query)
 		if err != nil {
 			return err
 		}
 		out.Decision = &decision
 	} else {
 		out.Year = year
-		out.Backtest, err = summarizeProBacktest(backtestPro(games, year, resets), year)
+		out.Backtest, err = summarizeProBacktest(backtestPro(dataset, year, resets), year)
 		if err != nil {
 			return err
 		}

@@ -17,7 +17,8 @@ func TestOracleImportBuildsSeriesBeforeDroppingUnusableGames(t *testing.T) {
 		t.Fatal(err)
 	}
 	writer := csv.NewWriter(file)
-	header := append(append([]string{}, oracleColumns...), "firstPick")
+	fields := append(append([]string{}, oracleColumns...), "firstPick", "patch")
+	header := append([]string{}, fields...)
 	header[0] = "\ufeff" + header[0]
 	if err := writer.Write(header); err != nil {
 		t.Fatal(err)
@@ -34,7 +35,7 @@ func TestOracleImportBuildsSeriesBeforeDroppingUnusableGames(t *testing.T) {
 					"result": fmt.Sprint(1 - side), "firstPick": fmt.Sprint(side), "ban1": "Dr. Mundo",
 				}
 				record := make([]string, len(header))
-				for i, column := range append(append([]string{}, oracleColumns...), "firstPick") {
+				for i, column := range fields {
 					record[i] = row[column]
 				}
 				if err := writer.Write(record); err != nil {
@@ -57,11 +58,12 @@ func TestOracleImportBuildsSeriesBeforeDroppingUnusableGames(t *testing.T) {
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
-	games, coverage, err := importProGames([]string{path, path})
+	dataset, err := importProGames([]string{path, path}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(games) != 4 || coverage["LPL"].Rejected["missing or invalid patch"] != 1 ||
+	games, coverage := dataset.games, dataset.coverage
+	if len(games) != 4 || coverage["LPL"].Rejected["missing patch outside verified league windows"] != 1 ||
 		coverage["LCK"].Eligible != 1 || coverage["LEC"].Eligible != 1 || coverage["LCS"].Eligible != 1 {
 		t.Fatalf("unexpected tier-one import: %+v, %+v", games, coverage)
 	}
@@ -71,6 +73,23 @@ func TestOracleImportBuildsSeriesBeforeDroppingUnusableGames(t *testing.T) {
 		}
 		if game.league == "LPL" && !game.available.Equal(start.Add(5*time.Hour)) {
 			t.Fatalf("unusable game shortened the series cutoff: %s", game.available)
+		}
+	}
+	windows := map[string][]proPatchWindow{
+		"LPL": {{Patch: proPatch{16, 2}, Start: start, End: start.Add(2 * time.Hour)}},
+		"LCK": {{Patch: proPatch{16, 3}, Start: start, End: start.Add(2 * time.Hour)}},
+	}
+	withCalendar, err := importProGames([]string{path}, windows)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(withCalendar.games) != 5 || withCalendar.coverage["LPL"].PatchSources["scheduled"] != 1 ||
+		withCalendar.coverage["LPL"].PatchSources["recorded"] != 1 || withCalendar.coverage["LCK"].ScheduleConflicts != 1 {
+		t.Fatalf("unexpected scheduled patch resolution: %+v", withCalendar.coverage)
+	}
+	for _, game := range withCalendar.games {
+		if game.patch != (proPatch{16, 2}) {
+			t.Fatalf("calendar altered a recorded patch: %+v", game)
 		}
 	}
 }
@@ -92,7 +111,8 @@ func TestProTrainingUsesPriorSeriesComparablePatchesAndLeagueBudget(t *testing.T
 	}
 	target := proContext{"LCK", proPatch{16, 9}, cutoff}
 	reset := []proPatch{{16, 9}, {16, 10}}
-	training := proTraining(games, target, reset, proModelSpecs[3])
+	dataset := proDataset{games: games}
+	training := proTraining(dataset, target, reset, proModelSpecs[3])
 	if len(training) != 51 || training[0].game.id != "local" {
 		t.Fatalf("selected %d games including %+v", len(training), training[0].game)
 	}
@@ -103,7 +123,7 @@ func TestProTrainingUsesPriorSeriesComparablePatchesAndLeagueBudget(t *testing.T
 	if math.Abs(donorWeight-6) > 1e-10 {
 		t.Fatalf("donor league weight = %g, want 6", donorWeight)
 	}
-	earlier := proTraining(games, target, nil, proModelSpecs[1])
+	earlier := proTraining(dataset, target, nil, proModelSpecs[1])
 	if len(earlier) != 2 || earlier[1].game.id != "older" || earlier[1].weight >= earlier[0].weight {
 		t.Fatalf("league-only training did not discount the older patch: %+v", earlier)
 	}
@@ -147,13 +167,21 @@ func TestProDraftComparisonKeepsReferenceAndLegalityExplicit(t *testing.T) {
 		}
 		games = append(games, g)
 	}
-	decision, err := compareProDrafts(games, nil, query)
+	query.Patch = ""
+	dataset := proDataset{
+		games: games,
+		calendar: proPatchCalendar{Scheduled: map[string][]proPatchWindow{
+			"LCK": {{Patch: proPatch{16, 8}, Start: start, End: query.AsOf.Add(time.Hour)}},
+		}},
+	}
+	decision, err := compareProDrafts(dataset, nil, query)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ref, candidate, banned, unseen := decision.Options[0], decision.Options[1], decision.Options[2], decision.Options[3]
 	const full = "cross_league_cross_patch"
-	if decision.Status != "scored" || ref.Delta[full] != 0 || candidate.Delta[full] <= 0 || candidate.Bootstrap95 == nil {
+	if decision.Status != "scored" || decision.PatchSource != "scheduled" || decision.Patch != "16.8" ||
+		ref.Delta[full] != 0 || candidate.Delta[full] <= 0 || candidate.Bootstrap95 == nil {
 		t.Fatalf("expected a supported contrast: %+v", decision)
 	}
 	if candidate.Evidence.PlayerRoleGames != 20 || candidate.Evidence.OpponentMatchupGames != 20 ||

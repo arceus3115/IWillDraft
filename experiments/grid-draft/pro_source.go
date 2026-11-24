@@ -34,6 +34,8 @@ func parseProPatch(raw string) (proPatch, error) {
 
 func (p proPatch) String() string { return fmt.Sprintf("%d.%d", p.version, p.update) }
 
+func (p proPatch) MarshalText() ([]byte, error) { return []byte(p.String()), nil }
+
 func championKey(name string) string {
 	return strings.Map(func(r rune) rune {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {
@@ -71,21 +73,29 @@ type oracleGame struct {
 }
 
 type proCoverage struct {
-	Eligible       int            `json:"eligible_games"`
-	Rejected       map[string]int `json:"rejected_games_by_reason"`
-	Patches        map[string]int `json:"eligible_games_by_patch"`
-	First          *time.Time     `json:"first_game,omitempty"`
-	Last           *time.Time     `json:"last_game,omitempty"`
-	FirstPickKnown int            `json:"first_pick_known_games"`
+	Eligible          int            `json:"eligible_games"`
+	Rejected          map[string]int `json:"rejected_games_by_reason"`
+	Patches           map[string]int `json:"eligible_games_by_patch"`
+	First             *time.Time     `json:"first_game,omitempty"`
+	Last              *time.Time     `json:"last_game,omitempty"`
+	FirstPickKnown    int            `json:"first_pick_known_games"`
+	PatchSources      map[string]int `json:"eligible_games_by_patch_source"`
+	ScheduleConflicts int            `json:"patch_schedule_conflicts,omitempty"`
 }
 
-var oracleColumns = []string{"gameid", "league", "year", "split", "date", "game", "patch", "side", "position",
+var oracleColumns = []string{"gameid", "league", "year", "split", "date", "game", "side", "position",
 	"teamid", "playerid", "champion", "result", "ban1", "ban2", "ban3", "ban4", "ban5"}
 
-func importProGames(paths []string) ([]proGame, map[string]*proCoverage, error) {
+type proDataset struct {
+	games    []proGame
+	coverage map[string]*proCoverage
+	calendar proPatchCalendar
+}
+
+func importProGames(paths []string, scheduled map[string][]proPatchWindow) (proDataset, error) {
 	coverage := make(map[string]*proCoverage)
 	for _, league := range tierOneLeagues {
-		coverage[league] = &proCoverage{Rejected: map[string]int{}, Patches: map[string]int{}}
+		coverage[league] = &proCoverage{Rejected: map[string]int{}, Patches: map[string]int{}, PatchSources: map[string]int{}}
 	}
 	index := map[string]*oracleGame{}
 	for _, path := range paths {
@@ -113,17 +123,21 @@ func importProGames(paths []string) ([]proGame, map[string]*proCoverage, error) 
 			} else if group.rows[side][position] != nil && !sameOracleRow(group.rows[side][position], row) {
 				group.err = "conflicting duplicate rows"
 			} else {
-				keep := make(map[string]string, len(oracleColumns)+1)
+				keep := make(map[string]string, len(oracleColumns)+2)
 				for _, field := range oracleColumns {
 					keep[field] = row[field]
 				}
 				keep["firstPick"] = row["firstPick"]
+				keep["patch"] = strings.TrimSpace(row["patch"])
+				if keep["patch"] == "" {
+					keep["patch"] = group.rows[side][position]["patch"]
+				}
 				group.rows[side][position] = keep
 			}
 			return nil
 		}, oracleColumns...)
 		if err != nil {
-			return nil, nil, err
+			return proDataset{}, err
 		}
 	}
 	type seriesKey struct {
@@ -135,12 +149,16 @@ func importProGames(paths []string) ([]proGame, map[string]*proCoverage, error) 
 		reason string
 	}
 	pairs := map[seriesKey][]entry{}
+	var tagged []proGame
 	for key, group := range index {
 		game, reason := group.game()
 		if game.start.IsZero() || game.number == 0 || game.sides[0].Team == "" || game.sides[1].Team == "" {
 			league, _, _ := strings.Cut(key, "/")
 			coverage[league].Rejected[reason]++
 			continue
+		}
+		if reason == "" && game.patch != (proPatch{}) {
+			tagged = append(tagged, game)
 		}
 		blue, red := game.sides[0].Team, game.sides[1].Team
 		var nativeID string
@@ -151,6 +169,7 @@ func importProGames(paths []string) ([]proGame, map[string]*proCoverage, error) 
 		pairs[pair] = append(pairs[pair], entry{game, reason})
 	}
 
+	calendar := buildProPatchCalendar(scheduled, tagged, coverage)
 	var games []proGame
 	for pair, history := range pairs {
 		slices.SortFunc(history, func(a, b entry) int {
@@ -186,8 +205,22 @@ func importProGames(paths []string) ([]proGame, map[string]*proCoverage, error) 
 				game.series = first.id
 				game.startOfSeries = first.start
 				game.available = last.start.Add(historyLag)
+				patchSource := "recorded"
+				if game.patch == (proPatch{}) {
+					window, source := calendar.patchAt(game.league, game.start)
+					if source == "" {
+						report.Rejected["missing patch outside verified league windows"]++
+						continue
+					}
+					game.patch, patchSource = window.Patch, source
+					if source == "observed" && window.End.After(game.available) {
+						// This label was corroborated only when the observed window was bracketed.
+						game.available = window.End
+					}
+				}
 				games = append(games, game)
 				report.Eligible++
+				report.PatchSources[patchSource]++
 				if game.firstPick != 0 {
 					report.FirstPickKnown++
 				}
@@ -202,15 +235,21 @@ func importProGames(paths []string) ([]proGame, map[string]*proCoverage, error) 
 		}
 	}
 	slices.SortFunc(games, compareProGames)
-	return games, coverage, nil
+	return proDataset{games, coverage, calendar}, nil
 }
 
 func sameOracleRow(a, b map[string]string) bool {
-	for _, field := range []string{"league", "year", "split", "date", "game", "patch", "teamid",
+	for _, field := range []string{"league", "year", "split", "date", "game", "teamid",
 		"playerid", "champion", "result", "ban1", "ban2", "ban3", "ban4", "ban5", "firstPick"} {
 		if a[field] != b[field] {
 			return false
 		}
+	}
+	left, right := a["patch"], strings.TrimSpace(b["patch"])
+	if left != "" && right != "" && left != right {
+		aPatch, aErr := parseProPatch(left)
+		bPatch, bErr := parseProPatch(right)
+		return aErr == nil && bErr == nil && aPatch == bPatch
 	}
 	return true
 }
@@ -247,10 +286,6 @@ func (group *oracleGame) game() (proGame, string) {
 	if group.err != "" {
 		return g, group.err
 	}
-	g.patch, err = parseProPatch(blue["patch"])
-	if err != nil {
-		return g, "missing or invalid patch"
-	}
 	if blue["firstPick"] == "1" && red["firstPick"] == "0" {
 		g.firstPick = 1
 	}
@@ -263,6 +298,7 @@ func (group *oracleGame) game() (proGame, string) {
 		return g, "invalid game outcome"
 	}
 	picked, players := map[string]bool{}, map[string]bool{}
+	recordedPatchLabel := ""
 	for side, rows := range group.rows {
 		team := rows[len(proRoles)]
 		for _, row := range rows {
@@ -271,8 +307,19 @@ func (group *oracleGame) game() (proGame, string) {
 			}
 			if row["teamid"] != team["teamid"] || row["result"] != team["result"] ||
 				row["date"] != blue["date"] || row["game"] != blue["game"] ||
-				row["year"] != blue["year"] || row["split"] != blue["split"] || row["patch"] != blue["patch"] {
+				row["year"] != blue["year"] || row["split"] != blue["split"] {
 				return g, "inconsistent game metadata"
+			}
+			if label := row["patch"]; label != "" && label != recordedPatchLabel {
+				patch, err := parseProPatch(label)
+				if err != nil {
+					return g, "invalid recorded patch"
+				}
+				if g.patch != (proPatch{}) && g.patch != patch {
+					return g, "inconsistent recorded patch"
+				}
+				g.patch = patch
+				recordedPatchLabel = label
 			}
 		}
 		for role, row := range rows[:len(proRoles)] {

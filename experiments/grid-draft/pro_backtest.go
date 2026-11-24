@@ -24,7 +24,7 @@ type proPrediction struct {
 	priorLocalPatchGames int
 }
 
-func backtestPro(games []proGame, year int, resets []proPatch) []proPrediction {
+func backtestPro(dataset proDataset, year int, resets []proPatch) []proPrediction {
 	type fits struct {
 		models               [len(proModelSpecs)]proModel
 		ready                [len(proModelSpecs)]bool
@@ -33,7 +33,7 @@ func backtestPro(games []proGame, year int, resets []proPatch) []proPrediction {
 	var predictions []proPrediction
 	var week time.Time
 	var models map[proContext]fits
-	for _, game := range games {
+	for _, game := range dataset.games {
 		if game.year != year {
 			continue
 		}
@@ -46,7 +46,7 @@ func backtestPro(games []proGame, year int, resets []proPatch) []proPrediction {
 		fit, exists := models[target]
 		if !exists {
 			for i, spec := range proModelSpecs {
-				training := proTraining(games, target, resets, spec)
+				training := proTraining(dataset, target, resets, spec)
 				if spec.samePatchOnly {
 					for _, row := range training {
 						if row.game.league == target.league {

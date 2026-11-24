@@ -181,6 +181,7 @@ type proDecision struct {
 	Status              string                          `json:"status"`
 	League              string                          `json:"league"`
 	Patch               string                          `json:"patch"`
+	PatchSource         string                          `json:"patch_source"`
 	AsOf                time.Time                       `json:"as_of"`
 	Reference           string                          `json:"reference"`
 	TeamSideProbability *float64                        `json:"team_player_side_probability,omitempty"`
@@ -234,16 +235,24 @@ func proOptionSupport(training []proWeightedGame, model proModel, target proGame
 	return out
 }
 
-func compareProDrafts(games []proGame, resets []proPatch, q proQuery) (proDecision, error) {
+func compareProDrafts(dataset proDataset, resets []proPatch, q proQuery) (proDecision, error) {
+	patchSource := "scenario"
+	if strings.TrimSpace(q.Patch) == "" {
+		window, source := dataset.calendar.patchAt(q.League, q.AsOf)
+		if source == "" {
+			return proDecision{}, fmt.Errorf("no verified %s patch window at %s, provide the competitive patch in the scenario", q.League, q.AsOf.Format(time.RFC3339))
+		}
+		q.Patch, patchSource = window.Patch.String(), source
+	}
 	target, unavailable, err := q.prepare()
 	if err != nil {
 		return proDecision{}, err
 	}
 	const full = len(proModelSpecs) - 1
 	context := proContext{q.League, target.patch, q.AsOf}
-	training := proTraining(games, context, resets, proModelSpecs[full])
+	training := proTraining(dataset, context, resets, proModelSpecs[full])
 	out := proDecision{
-		Status: "insufficient_training", League: q.League, Patch: target.patch.String(), AsOf: q.AsOf,
+		Status: "insufficient_training", League: q.League, Patch: target.patch.String(), PatchSource: patchSource, AsOf: q.AsOf,
 		Reference: q.Reference, Training: describeProTraining(training),
 	}
 	if !enoughProHistory(training) {
@@ -254,7 +263,7 @@ func compareProDrafts(games []proGame, resets []proPatch, q proQuery) (proDecisi
 	models[full] = fitProModel(training, true)
 	models[0] = fitProModel(training, false)
 	for i := 1; i < full; i++ {
-		rows := proTraining(games, context, resets, proModelSpecs[i])
+		rows := proTraining(dataset, context, resets, proModelSpecs[i])
 		if enoughProHistory(rows) {
 			models[i] = fitProModel(rows, true)
 		}
