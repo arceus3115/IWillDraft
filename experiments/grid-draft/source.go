@@ -35,7 +35,7 @@ type matchSeries struct {
 	Games           []matchGame
 }
 
-func readCSV(path string, read func(map[string]string) error) error {
+func readCSV(path string, read func(map[string]string) error, required ...string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -44,7 +44,13 @@ func readCSV(path string, read func(map[string]string) error) error {
 	reader := csv.NewReader(file)
 	header, err := reader.Read()
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	header[0] = strings.TrimPrefix(header[0], "\ufeff")
+	for _, field := range required {
+		if !slices.Contains(header, field) {
+			return fmt.Errorf("%s: missing column %q", path, field)
+		}
 	}
 	for row := 2; ; row++ {
 		values, err := reader.Read()
@@ -52,7 +58,7 @@ func readCSV(path string, read func(map[string]string) error) error {
 			return nil
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("%s row %d: %w", path, row, err)
 		}
 		record := make(map[string]string, len(header))
 		for i, field := range header {

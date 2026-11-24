@@ -1,5 +1,64 @@
 # GRID draft experiment
 
+## Tier-one draft decision support
+
+Supply one local [Oracle’s Elixir yearly CSV](https://drive.google.com/drive/folders/1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH) per season. The importer takes domestic LCS, LCK, LPL, and LEC games from 2025 onward, reconciles the two team rows with the ten player and role rows, and joins games into series. The JSON output shows the dates and patches actually covered in each league and counts discarded games by reason. GRID remains the source for the ordered replay and gameplay analysis below.
+
+```sh
+GOWORK=off go run . -pro-csv "$OE_2026_CSV" -pro-year 2026
+GOWORK=off go run . -pro-csv "$OE_2026_CSV" -pro-scenario /path/to/scenario.json
+```
+
+The backtest refits each league and competitive patch at the start of each UTC week. A series enters training four hours after its last observed game start. Series identity uses the source series key when embedded in the game ID and otherwise uses the league, season, split, team pair, ordered game numbers, and timestamps. Held-out games share their series' cutoff. The report shows Brier loss, log loss, and calibration by league, patch, and whether the league had fewer than 15 preceding games on the target patch. It compares transfer against a team/player/side baseline, a target-league model, and a same-patch model. Each comparison uses the games scored by both models and resamples whole series for intervals. Check coverage alongside each comparison, particularly early in a patch.
+
+Training uses up to 180 days in the same client major and weights each older game by both elapsed time (60-day half-life) and patch distance (two-update half-life). A donor league contributes at most half the greater of the target league's weight and 12. `-pro-patch-resets 26.13,26.19` is an example of an analyst-specified reset. Each reset excludes earlier patches when scoring that patch or later in the same major. Patch labels such as `26.13` and `16.13` resolve to the same version. Choose the scheduled **competitive** patch for a matchup.
+
+The logistic model jointly estimates map side, first-pick side, and team and player strength alongside champion-by-role effects. Shared champion effects have shrunk league and patch adjustments. Player-champion, allied-pair, and direct lane-matchup terms shrink more heavily. Weighting and penalties are fixed experiment settings. They let the backtest test whether transfer or additional draft context earns its place.
+
+### Compare a draft choice
+
+Set nine champion assignments and leave the focus role's champion empty. Use team and player IDs from the CSV, a timestamp with a UTC offset, and the current draft's bans, earlier Fearless locks, and any patch disables in `unavailable`. Supply a legal reference and the alternatives the coach wants to review. Map side and first-pick side are independent under First Selection. [Riot’s First Selection rules](https://lolesports.com/en-GB/news/season-start-2026-lol-esports)
+
+```json
+{
+  "league": "LCK",
+  "patch": "26.9",
+  "as_of": "2026-05-08T08:00:00Z",
+  "first_pick_side": "red",
+  "focus_side": "blue",
+  "focus_role": "mid",
+  "blue": {
+    "team_id": "blue-team-id",
+    "roles": {
+      "top": {"player_id": "b-top", "champion": "Gnar"},
+      "jng": {"player_id": "b-jng", "champion": "Vi"},
+      "mid": {"player_id": "b-mid"},
+      "bot": {"player_id": "b-bot", "champion": "Kai'Sa"},
+      "sup": {"player_id": "b-sup", "champion": "Leona"}
+    }
+  },
+  "red": {
+    "team_id": "red-team-id",
+    "roles": {
+      "top": {"player_id": "r-top", "champion": "Renekton"},
+      "jng": {"player_id": "r-jng", "champion": "Xin Zhao"},
+      "mid": {"player_id": "r-mid", "champion": "Azir"},
+      "bot": {"player_id": "r-bot", "champion": "Jinx"},
+      "sup": {"player_id": "r-sup", "champion": "Nautilus"}
+    }
+  },
+  "unavailable": ["Orianna"],
+  "reference": "Ahri",
+  "candidates": ["Ahri", "Taliyah", "Orianna"]
+}
+```
+
+The decision reports probability differences versus the reference for each supported model, with whole-series refits for a conditional sampling interval on the transfer estimate. Feature contributions explain the difference in fitted log odds. Counts include stage reps for that player and role, the opposing lane matchup, the four relevant allied pairs, recorded bans, and how much champion-role evidence comes from the target patch and league. Unknown teams, players, and thin supporting roles are surfaced. A model needs 30 prior games and eight weighted games to score. Each candidate needs three role appearances and at least one weighted appearance. Fewer than five role appearances in the target league and patch marks the estimate as limited.
+
+The comparison holds the other nine assignments fixed. Run it on different plausible completions when opponents can still change their draft. Observed stage selections and outcomes support conditional estimates. Coaching and player assignment, player proficiency, and which options teams chose can still confound the estimated differences.
+
+## LCS archive replay
+
 On a completed Cloud9–FlyQuest best-of-five, the GRID Series State API and Cloud9's GRID archive agreed on all 100 ordered picks and bans and on first-dragon credit and counts for all 10 team-games. The experiment uses `grid-framework` v0.1.0 for the completed state and the archived game clock for when the lead moved. It joins both to the same Games 1–5 replay.
 
 ## Gameplay evidence for the playbook

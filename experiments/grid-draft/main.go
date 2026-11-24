@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -19,20 +20,77 @@ func main() {
 	event := flag.String("opening-event", "LCS - Split", "ordered-draft event prefix")
 	year := flag.Int("opening-year", 2026, "ordered-draft season")
 	api := flag.String("api-series", "", "fetch one completed series with GRID_API_KEY")
+	var proPaths []string
+	flag.Func("pro-csv", "local Oracle's Elixir CSV (repeat per season)", func(path string) error {
+		if strings.TrimSpace(path) == "" {
+			return fmt.Errorf("empty CSV path")
+		}
+		proPaths = append(proPaths, path)
+		return nil
+	})
+	proYear := flag.Int("pro-year", 2026, "target season for the tier-one backtest")
+	proScenario := flag.String("pro-scenario", "", "JSON draft comparison scenario instead of a backtest")
+	proResets := flag.String("pro-patch-resets", "", "comma-separated patch boundaries that reset draft history")
 	flag.Parse()
 	var err error
 	switch {
+	case len(proPaths) > 0 && (*api != "" || *replay != ""):
+		err = fmt.Errorf("run the tier-one model and GRID replay or API audit separately")
+	case len(proPaths) > 0:
+		err = runProModel(proPaths, *proYear, *proScenario, *proResets)
+	case *proScenario != "" || *proResets != "" || *proYear != 2026:
+		err = fmt.Errorf("provide at least one -pro-csv for the tier-one model")
 	case *api != "":
 		err = checkAPI(ctx, *api, *data)
 	case *data != "":
 		err = runArchive(ctx, *data, *replay, *event, *year)
 	default:
-		err = fmt.Errorf("provide -data or STL_DATA_DIR, or use -api-series")
+		err = fmt.Errorf("provide -pro-csv, -data or STL_DATA_DIR, or use -api-series")
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func runProModel(paths []string, year int, scenario, resetFlags string) error {
+	resets, err := parsePatchResets(resetFlags)
+	if err != nil {
+		return err
+	}
+	games, coverage, err := importProGames(paths)
+	if err != nil {
+		return err
+	}
+	if len(games) == 0 {
+		return fmt.Errorf("no eligible tier-one games in the supplied CSVs")
+	}
+	out := struct {
+		Year     int                     `json:"backtest_year,omitempty"`
+		Coverage map[string]*proCoverage `json:"input_coverage"`
+		Backtest []proBacktestReport     `json:"backtest,omitempty"`
+		Decision *proDecision            `json:"decision,omitempty"`
+	}{Coverage: coverage}
+	if scenario != "" {
+		query, err := readProQuery(scenario)
+		if err != nil {
+			return err
+		}
+		decision, err := compareProDrafts(games, resets, query)
+		if err != nil {
+			return err
+		}
+		out.Decision = &decision
+	} else {
+		out.Year = year
+		out.Backtest, err = summarizeProBacktest(backtestPro(games, year, resets), year)
+		if err != nil {
+			return err
+		}
+	}
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(out)
 }
 
 func checkAPI(ctx context.Context, id, data string) error {
